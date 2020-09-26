@@ -1,0 +1,6 @@
+*.log
+*.gz
+*.data
+meta
+__pycache__
+.env
