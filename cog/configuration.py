@@ -1,5 +1,4 @@
 from typing import TypeVar, Generic, Set, Dict, Union, Tuple, List
-from os import getenv
 
 from discord import Member, Guild
 from discord.utils import find
@@ -34,7 +33,7 @@ class Configuration(commands.Cog):
             "visualRole", 
             {"Top Gunner": {"Space Pilot", "Rocketeer"}})
         
-        targetGuildCheck = lambda g: g.name == getenv("GUILD")
+        targetGuildCheck = lambda g: g.name == bot.targetGuild
         self.guild: Guild = find(targetGuildCheck, bot.guilds)
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:

@@ -17,6 +17,10 @@ class HaxBotJr(commands.Bot):
 
     session = ClientSession()
 
+    def __init__(self, targetGuild, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.targetGuild = targetGuild
+
     async def on_ready(self):
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
