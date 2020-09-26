@@ -106,6 +106,7 @@ class MemberManager(commands.Cog):
             gMember = self._add_member(after)
             self._update_guild_info(gMember, after)
         elif isGMemberBefore and isGMemberAfter:
+            Logger.bot.debug(f"Updating guild info {before} -> {after}")
             self._update_guild_info(self.members[before.id], after)
     
     def _update_guild_info(self, gMember: GuildMember, dMember: Member):
