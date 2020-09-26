@@ -49,7 +49,7 @@ class Configuration(commands.Cog):
         return roleRank in group.val
 
     def get_rank(self, member: Member) -> Union[None, Tuple[str, str]]:
-        nick = member.nick.strip()
+        nick = member.nick
         if not nick or " " not in nick:
             return None
 
