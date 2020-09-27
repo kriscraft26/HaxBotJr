@@ -22,7 +22,10 @@ class DataCog:
         def decorator(class_):
             Logger.bot.debug(f"{class_} registered as data cog with attributes {attributes}")
             cls._subClasses[class_] = [attributes, None]
-            class_.cog_unload = lambda self: cls._save_cls(class_)
+            def cog_unload(self):
+                Logger.bot.debug(f"saving data of {class_.__name__}")
+                cls._save_cls(class_)
+            class_.cog_unload = cog_unload
             return class_
         return decorator
     
