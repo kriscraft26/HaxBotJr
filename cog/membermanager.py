@@ -221,8 +221,7 @@ class MemberManager(commands.Cog):
     @parser("stats", "ign")
     async def display_stats(self, ctx: commands.Context, ign: str):
         if ign not in self.ignIdMap:
-            await ctx.send(embed=make_alert(
-                "", f"{ign} is not in the guild.", None, color=COLOR_ERROR))
+            await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
             return
         
         gMember = self.get_member_by_ign(ign)
@@ -254,7 +253,7 @@ class MemberManager(commands.Cog):
     @parser("members", ["removed"])
     async def display_members(self, ctx: commands.Context, removed):
         lb = self.removedMembers.keys() if removed else self.members.keys()
-        title = ("Removed" if removed else "") + "Guild Members"
+        title = ("Removed " if removed else "") + "Guild Members"
         
         entries = []
 

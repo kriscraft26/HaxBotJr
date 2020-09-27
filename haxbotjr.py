@@ -13,6 +13,7 @@ from cog.membermanager import MemberManager
 from cog.xptracker import XPTracker
 from cog.wartracker import WarTracker
 from cog.dateclock import DateClock
+from cog.remotedebugger import RemoteDebugger
 
 class HaxBotJr(commands.Bot):
 
@@ -30,6 +31,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(XPTracker(self))
         self.add_cog(DataCog.load(WarTracker, self))
         self.add_cog(DateClock(self))
+        self.add_cog(RemoteDebugger())
 
         DataCog().start_saving_loop()
 
@@ -40,7 +42,7 @@ class HaxBotJr(commands.Bot):
         run(cls.session.close())
 
     async def on_command_error(self, ctx: commands.Context, e: Exception):
-        alert = make_alert("Command Error", str(e), None, color=COLOR_ERROR)
+        alert = make_alert(str(e), title="Command Error")
         await ctx.send(embed=alert)
     
     async def on_reaction_add(self, reaction, user):

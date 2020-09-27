@@ -14,7 +14,7 @@ COLOR_SUCCESS = 0x8fb339
 MAX_ENTRY_PER_PAGE = 10
 
 
-def make_alert(title, text, subtext, color: int=None) -> Embed:
+def make_alert(text, title="", subtext=None, color: int=COLOR_ERROR) -> Embed:
     embed = Embed(title=text, color=color)
     embed.set_author(name=title)
     subtext and embed.set_footer(text=subtext)
