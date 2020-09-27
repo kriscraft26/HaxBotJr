@@ -64,3 +64,4 @@ class RemoteDebugger(commands.Cog):
     def search_archives(self):
         debugChecker = lambda f: f.startswith("debug") and f.endswith(".log.gz")
         self.archives = list(filter(debugChecker, os.listdir(ARCHIVE_FOLDER)))
+        self.archives.sort()

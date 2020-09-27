@@ -81,7 +81,7 @@ class Logger:
         cls.guild._add_handler()
         cls.xp._add_handler()
 
-        cls._create_meta(now().date())
+        cls._create_meta()
 
     @classmethod
     def archive_logs(cls):
@@ -122,7 +122,8 @@ class Logger:
         cls._create_meta(now().date())
 
     @staticmethod
-    def _create_meta(today):
+    def _create_meta():
+        today = now().date()
         todayFormatted = today.strftime('%Y-%m-%d')
         archivedDebugs = []
         logVersion = 0
@@ -135,7 +136,7 @@ class Logger:
             elif file.startswith("debug") and file.endswith(".log.gz"):
                 archivedDebugs.append(file)
         
-        PickleUtil.save(META_FILE, (today, logVersion, archivedDebugs))
+        PickleUtil.save(META_FILE, (today, logVersion, sorted(archivedDebugs)))
 
     @staticmethod
     def _archive_file(target, dest):
