@@ -16,6 +16,9 @@ class Field(Generic[T]):
     def __init__(self, name: str, initValue: T):
         self.name = name
         self.val: T = initValue
+    
+    def __repr__(self):
+        return f"<Field {self.name}={self.val}>"
 
 
 @DataCog.register("guildGroup", "staffGroup", "visualRole")
