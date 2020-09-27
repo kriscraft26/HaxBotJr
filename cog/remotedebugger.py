@@ -3,7 +3,7 @@ import gzip
 from pprint import pformat
 from io import StringIO
 
-from discord import File
+from discord import File, Message
 from discord.ext import commands
 
 from logger import DEBUG_FILE, ARCHIVE_FOLDER
@@ -11,12 +11,15 @@ from msgmaker import *
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil
 from cog.datacog import DataCog
+from cog.configuration import Configuration
 
 
 class RemoteDebugger(commands.Cog):
 
-    def __init__(self):
+    def __init__(self, bot: commands.Bot):
         self.archives = []
+
+        self._config: Configuration = bot.get_cog("Configuration")
 
     @parser("debug", isGroup=True)
     async def debug_root(self, ctx: commands.Context):
@@ -65,3 +68,12 @@ class RemoteDebugger(commands.Cog):
         debugChecker = lambda f: f.startswith("debug") and f.endswith(".log.gz")
         self.archives = list(filter(debugChecker, os.listdir(ARCHIVE_FOLDER)))
         self.archives.sort()
+    
+    async def cog_check(self, ctx: commands.Context):
+        isStaff = self._config.is_of_group(self._config.staffGroup, ctx.author)
+        if not isStaff:
+            staffGroup = ", ".join(self._config.staffGroup.val)
+            alert = make_alert("You have no permission to use this command",
+                subtext=f"only {staffGroup} can use it")
+            await ctx.send(embed=alert)
+        return isStaff
