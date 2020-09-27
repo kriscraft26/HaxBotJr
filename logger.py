@@ -88,7 +88,7 @@ class Logger:
         today = now().date()
 
         (logDate, logVersion, archivedDebugs) = PickleUtil.load(META_FILE)
-        archiveName = f"{logDate.strftime('%Y-%m-%d')}:{logVersion}.log.gz"
+        archiveName = f"{logDate.strftime('%Y-%m-%d')}.{logVersion}.log.gz"
 
         cls._archive_file(LOG_FILE, ARCHIVE_FOLDER + archiveName)
         
@@ -129,7 +129,7 @@ class Logger:
 
         for file in os.listdir(ARCHIVE_FOLDER):
             if file.startswith(todayFormatted):
-                version = int(file.split(":")[1].split(".")[0])
+                version = int(file.split(".")[1])
                 if version >= logVersion:
                     logVersion = version + 1
             elif file.startswith("debug") and file.endswith(".log.gz"):
