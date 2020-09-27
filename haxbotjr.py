@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import make_alert, COLOR_ERROR
+from pagedmessage import PagedMessage
 from cog.datacog import DataCog
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
@@ -42,3 +43,6 @@ class HaxBotJr(commands.Bot):
     async def on_command_error(self, ctx: commands.Context, e: Exception):
         alert = make_alert("Command Error", str(e), None, color=COLOR_ERROR)
         await ctx.send(embed=alert)
+    
+    async def on_reaction_add(self, reaction, user):
+        PagedMessage.update(reaction, user)
