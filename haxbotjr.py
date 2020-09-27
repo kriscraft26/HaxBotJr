@@ -1,6 +1,7 @@
 from aiohttp import ClientSession
 from asyncio import run
 
+from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
@@ -23,6 +24,8 @@ class HaxBotJr(commands.Bot):
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
 
+        self.errSuppressedCmd = ["debug"]
+
         DataCog.init(self)
 
         self.add_cog(DataCog.load(Configuration, self))
@@ -31,7 +34,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(XPTracker(self))
         self.add_cog(DataCog.load(WarTracker, self))
         self.add_cog(DateClock(self))
-        self.add_cog(RemoteDebugger())
+        self.add_cog(RemoteDebugger(self))
 
         DataCog().start_saving_loop()
 
@@ -41,7 +44,12 @@ class HaxBotJr(commands.Bot):
         Logger.archive_logs()
         run(cls.session.close())
 
-    async def on_command_error(self, ctx: commands.Context, e: Exception):
+    async def on_command_error(self, ctx: commands.Context, e: commands.CommandError):
+        cmd = str(ctx.command)
+        if find(lambda s: cmd.startswith(s), self.errSuppressedCmd):
+            msg = ctx.message
+            print(f"suppressed error: {e} from '{msg.content}' in #{msg.channel}")
+            return
         alert = make_alert(str(e), title="Command Error")
         await ctx.send(embed=alert)
     
