@@ -22,6 +22,7 @@ class DataCog:
         def decorator(class_):
             Logger.bot.debug(f"{class_} registered as data cog with attributes {attributes}")
             cls._subClasses[class_] = [attributes, None]
+            class_.cog_unload = lambda self: cls._save_cls(class_)
             return class_
         return decorator
     
@@ -55,17 +56,18 @@ class DataCog:
         return cog
     
     @classmethod
-    def save(cls):
-        for class_, [attributes, instance] in cls._subClasses.items():
-            values = list(map(lambda attr: getattr(instance, attr), attributes))
-            PickleUtil.save(cls._get_data_file(class_), values)
+    def _save_cls(cls, targetCls):
+        [attributes, instance] = cls._subClasses[targetCls]
+        values = list(map(lambda attr: getattr(instance, attr), attributes))
+        PickleUtil.save(cls._get_data_file(targetCls), values)
 
     def start_saving_loop(self):
         self._save_loop.start()
 
     @tasks.loop(seconds=SAVE_INTERVAL)
     async def _save_loop(self):
-        DataCog.save()
+        for class_ in DataCog._subClasses.keys():
+            DataCog._save_cls(class_)
     
     @_save_loop.before_loop
     async def _before_save_loop(self):

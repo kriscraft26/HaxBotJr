@@ -36,7 +36,6 @@ class HaxBotJr(commands.Bot):
     @classmethod
     def exit(cls):
         Logger.bot.debug("exiting...")
-        DataCog.save()
         Logger.archive_logs()
         run(cls.session.close())
 
