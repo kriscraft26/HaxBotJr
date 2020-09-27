@@ -45,4 +45,4 @@ class HaxBotJr(commands.Bot):
         await ctx.send(embed=alert)
     
     async def on_reaction_add(self, reaction, user):
-        PagedMessage.update(reaction, user)
+        await PagedMessage.update(reaction, user)
