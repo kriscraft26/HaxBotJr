@@ -56,7 +56,7 @@ class XPTracker(commands.Cog):
         for member in self._memberManager.members.values():
             member.accXp = 0
     
-    @parser("xp", ["total"])
+    @parser("xp", ["total"], isGroup=True)
     async def display_xp_lb(self, ctx: commands.Context, total):
         lb = self._memberManager.totalXpLb if total else self._memberManager.accXpLb
         igns = self._memberManager.ignIdMap.keys()
@@ -67,3 +67,7 @@ class XPTracker(commands.Cog):
         pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
             title=title, api=self._guildStatsTracker)
         await PagedMessage(pages, ctx.channel).init()
+    
+    @parser("xp reset", parent=display_xp_lb)
+    async def reset_xp_cmd(self, ctx: commands.Context):
+        self.reset_xp()
