@@ -62,6 +62,16 @@ class MemberManager(commands.Cog):
 
     def __loaded__(self):
         self._ig_members_update.start()
+
+        allMembers = list(self.members.values()) + list(self.removedMembers.values())
+        if allMembers:
+            sampleMember = allMembers[0]
+            if not hasattr(sampleMember, "discord"):
+                Logger.bot.debug("detected outed GuildMember objects, updating...")
+                for member in allMembers:
+                    dMember = self._config.guild.get_member(member.id)
+                    member.discord = f"{dMember.name}#{dMember.discriminator}"
+                    Logger.bot.debug(f"-> {member}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
