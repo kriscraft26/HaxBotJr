@@ -110,15 +110,14 @@ class Logger:
     def reset(cls):
         cls.archive_logs()
 
-        infoHandler.acquire()
+        infoHandler.close()
         with open(LOG_FILE, "w") as f:
             f.write("")
-        infoHandler.release()
-        debugHandler.acquire()
+
+        debugHandler.close()
         with open(DEBUG_FILE, "w") as f:
             f.write("")
-        debugHandler.release()
-
+        
         cls._create_meta()
 
     @staticmethod
