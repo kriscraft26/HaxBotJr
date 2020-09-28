@@ -32,7 +32,8 @@ class GuildMember:
         s = "<GuildMember"
         properties = ["ign", "discord", "rank", "totalXp", "accXp", "warCount"]
         for p in properties:
-            s += f" {p}={getattr(self, p)}"
+            if hasattr(self, p):
+                s += f" {p}={getattr(self, p)}"
         return s + ">"
 
 
@@ -67,7 +68,7 @@ class MemberManager(commands.Cog):
         if allMembers:
             sampleMember = allMembers[0]
             if not hasattr(sampleMember, "discord"):
-                Logger.bot.debug("detected outed GuildMember objects, updating...")
+                Logger.bot.debug("detected outdated GuildMember objects, updating...")
                 for member in allMembers:
                     dMember = self._config.guild.get_member(member.id)
                     member.discord = f"{dMember.name}#{dMember.discriminator}"
