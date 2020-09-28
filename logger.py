@@ -119,7 +119,7 @@ class Logger:
             f.write("")
         debugHandler.release()
 
-        cls._create_meta(now().date())
+        cls._create_meta()
 
     @staticmethod
     def _create_meta():
