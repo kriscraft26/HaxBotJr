@@ -11,8 +11,7 @@ from cog.membermanager import MemberManager, GuildMember
 XP_UPDATE_INTERVAL = 6
 
 class XPTracker(commands.Cog):
-
-    XP_DECREASE_THRESHOLD = -10000
+    XP_RESET_THRESHOLD = 10000
 
     def __init__(self, bot: commands.Bot):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
@@ -41,7 +40,7 @@ class XPTracker(commands.Cog):
         if deltaXp > 0 and member.totalXp >= 0:
             member.accXp += deltaXp
             Logger.xp.info(f"{member.ign} +{deltaXp}xp, accXp {prevAccXp} -> {member.accXp}")
-        elif deltaXp < XPTracker.XP_DECREASE_THRESHOLD:
+        elif deltaXp < 0 and currTXp <= XPTracker.XP_RESET_THRESHOLD:
             # if the total xp decreased, then the member must have
             # left the guild before for it to be reset to 0.
             member.accXp = currTXp
