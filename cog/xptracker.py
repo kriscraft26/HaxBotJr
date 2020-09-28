@@ -43,7 +43,7 @@ class XPTracker(commands.Cog):
         elif deltaXp < 0 and currTXp <= XPTracker.XP_RESET_THRESHOLD:
             # if the total xp decreased, then the member must have
             # left the guild before for it to be reset to 0.
-            member.accXp = currTXp
+            member.accXp += currTXp
             Logger.xp.info(f"{member.ign} xp resetted, accXp {prevAccXp} -> {member.accXp}")
         if currTXp != member.totalXp:
             Logger.xp.info(f"{member.ign} totalXp {member.totalXp} -> {currTXp}")
