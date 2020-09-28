@@ -12,12 +12,12 @@ from cog.configuration import Configuration
 from cog.datacog import DataCog
 
 
-# TODO: add dMember field
 class GuildMember:
 
     def __init__(self, dMember: Member):
         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
         self.id: int = dMember.id
+        self.discord = f"{dMember.name}#{dMember.discriminator}"
 
         seg = dMember.nick.split(" ")
         self.rank = " ".join(seg[:-1])
@@ -30,7 +30,7 @@ class GuildMember:
     
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "rank", "totalXp", "accXp", "warCount"]
+        properties = ["ign", "discord", "rank", "totalXp", "accXp", "warCount"]
         for p in properties:
             s += f" {p}={getattr(self, p)}"
         return s + ">"
@@ -103,8 +103,7 @@ class MemberManager(commands.Cog):
         if isGMemberBefore and not isGMemberAfter:
             self._remove_member(self.members[after.id])
         elif not isGMemberBefore and isGMemberAfter:
-            gMember = self._add_member(after)
-            self._update_guild_info(gMember, after)
+            self._update_guild_info(self._add_member(after), after)
         elif isGMemberBefore and isGMemberAfter:
             self._update_guild_info(self.members[before.id], after)
     
@@ -123,6 +122,8 @@ class MemberManager(commands.Cog):
             del self.ignIdMap[gMember.ign]
             self.ignIdMap[currIgn] = gMember.id
             gMember.ign = currIgn
+        
+        gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
     def _bulk_update_members(self):
         currGuildDMembers = self._config.get_all_guild_members(self._igMembers)
@@ -224,7 +225,6 @@ class MemberManager(commands.Cog):
             return
         
         gMember = self.get_member_by_ign(ign)
-        dMember: Member = self._config.guild.get_member(gMember.id)
 
         maxStatLen = len(str(max([gMember.accXp, gMember.totalXp, gMember.warCount])))
 
@@ -242,7 +242,7 @@ class MemberManager(commands.Cog):
         text += separator
         text += f"War Count:       %{maxStatLen}d (#{warCountRank})\n" % gMember.warCount
         text += separator
-        text += f"discord {dMember.name}#{dMember.discriminator}"
+        text += f"discord {gMember.discord}"
 
         title = f"[{gMember.rank}] {gMember.ign}"
 
@@ -260,9 +260,7 @@ class MemberManager(commands.Cog):
             igns = self.ignIdMap.keys()
             members = self.members
         title = ("Removed " if removed else "") + "Guild Members"
-        def statSelector(m):
-            dMember = self._config.guild.get_member(m.id)
-            return f"{dMember.name}#{dMember.discriminator}"
+        statSelector = lambda m: m.discord
         
         pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
             title=title)
