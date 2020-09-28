@@ -48,23 +48,21 @@ def make_page_indicator(pageNum, pageIndex) -> str:
     return "○ " * pageIndex + "● " + "○ " * (pageNum - pageIndex - 1)
 
 
-def make_lb_pages(ctx, lb, stateSelector, memberManager, **decorateArgs):
+def make_entry_pages(entries, **decoArgs):
+    rankFmt = f"[%-{len(str(len(entries)))}d]  "
+    pages = slice_entries(list(map(lambda _: rankFmt % _[0] + _[1], enumerate(entries))))
+    pageNum = len(pages)
+
+    pageFmt = lambda _: "\n".join(_[1]) + "\n\n" + make_page_indicator(pageNum, _[0])
+    return list(map(lambda _: decorate_text(pageFmt(_), **decoArgs), enumerate(pages)))
+
+
+def make_stat_entries(lb, igns, members, statSelector):
+    maxIgnLen = max(map(len, igns)) if igns else 0
+    entryFmt = f"%-{maxIgnLen}s | %s"
+
     entries = []
-
-    maxIgnLen = max(map(len, memberManager.ignIdMap))
-    maxRankLen = len(str(len(lb)))
-
-    entryFormat = f"[%-{maxRankLen}d]  %-{maxIgnLen}s  |  %s"
-
-    for rank, id_ in enumerate(lb):
-        gMember = memberManager.members[id_]
-        entries.append(entryFormat % (rank + 1, gMember.ign, stateSelector(gMember)))
-    
-    pages = []
-    pageNum = ceil(len(lb) / MAX_ENTRY_PER_PAGE) 
-
-    for index, pageEntries in enumerate(slice_entries(entries)):
-        page = "\n".join(pageEntries) + "\n\n" + make_page_indicator(pageNum, index)
-        pages.append(decorate_text(page, **decorateArgs))
-    
-    return pages
+    for id_ in lb:
+        gMember = members[id_]
+        entries.append(entryFmt % (gMember.ign, statSelector(gMember)))
+    return entries

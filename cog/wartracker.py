@@ -90,11 +90,13 @@ class WarTracker(commands.Cog):
     @parser("wc")
     async def display_war_count_lb(self, ctx: commands.Context):
         lb = self._memberManager.warCountLb
-        stateSelector = lambda m: m.warCount
+        igns = self._memberManager.ignIdMap.keys()
+        members = self._memberManager.members
+        statSelector = lambda m: m.warCount
         title = "War Count Leader Board"
 
-        pages = make_lb_pages(ctx, lb, stateSelector, self._memberManager, 
-                              title=title, api=self._serverListTracker)
+        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector), 
+            title="War Count Leader Board", api=self._serverListTracker)
         await PagedMessage(pages, ctx.channel).init()
 
 

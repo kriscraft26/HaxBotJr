@@ -59,10 +59,11 @@ class XPTracker(commands.Cog):
     @parser("xp", ["total"])
     async def display_xp_lb(self, ctx: commands.Context, total):
         lb = self._memberManager.totalXpLb if total else self._memberManager.accXpLb
+        igns = self._memberManager.ignIdMap.keys()
+        members = self._memberManager.members
         title = ("Total XP " if total else "Accumulated XP ") + "Leader Board"
-        stateSelector = lambda m: m.totalXp if total else m.accXp
+        statSelector = lambda m: m.totalXp if total else m.accXp
 
-        pages = make_lb_pages(
-            ctx, lb, stateSelector, self._memberManager, title=title, 
-            api=self._guildStatsTracker)
+        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
+            title=title, api=self._guildStatsTracker)
         await PagedMessage(pages, ctx.channel).init()

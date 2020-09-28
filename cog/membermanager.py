@@ -251,31 +251,19 @@ class MemberManager(commands.Cog):
     
     @parser("members", ["removed"])
     async def display_members(self, ctx: commands.Context, removed):
-        lb = self.removedMembers.keys() if removed else self.members.keys()
-        title = ("Removed " if removed else "") + "Guild Members"
-        
-        entries = []
-
         if removed:
+            lb = self.removedMembers.keys()
             igns = list(map(lambda m: m.ign, self.removedMembers.values()))
+            members = self.removedMembers
         else:
+            lb = self.members.keys()
             igns = self.ignIdMap.keys()
-        maxIgnLen = max(map(len, igns)) if len(igns) else 0
-        maxRankLen = len(str(len(lb)))
-
-        entryFormat = f"[%-{maxRankLen}d]  %-{maxIgnLen}s  |  %s"
-
-        for rank, id_ in enumerate(lb):
-            gMember = self.removedMembers[id_] if removed else self.members[id_]
-            dMember = self._config.guild.get_member(id_)
-            discordInfo = f"{dMember.name}#{dMember.discriminator}"
-            entries.append(entryFormat % (rank + 1, gMember.ign, discordInfo))
+            members = self.members
+        title = ("Removed " if removed else "") + "Guild Members"
+        def statSelector(m):
+            dMember = self._config.guild.get_member(m.id)
+            return f"{dMember.name}#{dMember.discriminator}"
         
-        pages = []
-        pageNum = ceil(len(lb) / MAX_ENTRY_PER_PAGE) 
-
-        for index, pageEntries in enumerate(slice_entries(entries)):
-            page = "\n".join(pageEntries) + "\n\n" + make_page_indicator(pageNum, index)
-            pages.append(decorate_text(page, title=title))
-        
+        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
+            title=title)
         await PagedMessage(pages, ctx.channel).init()
