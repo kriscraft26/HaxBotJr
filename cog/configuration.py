@@ -1,4 +1,4 @@
-from typing import Set, Dict, Union, Tuple, List, Any
+from typing import Set, Union, Tuple
 from os import getenv
 
 from discord import Member, Guild, TextChannel
@@ -6,7 +6,9 @@ from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import decorate_text
+from msgmaker import make_entry_pages, make_alert
+from pagedmessage import PagedMessage
+from util.cmdutil import parser
 from cog.datacog import DataCog
 
 
@@ -23,7 +25,7 @@ class Configuration(commands.Cog):
             "visualRole": {
                 "Top Gunner": {"Space Pilot", "Rocketeer"}
             },
-            "channel.log": None
+            "channel.xpLog": None
         }
         
         targetGuildCheck = lambda g: g.name == getenv("GUILD")
@@ -70,3 +72,22 @@ class Configuration(commands.Cog):
     
     def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
         return set(filter(lambda m: self.is_guild_member(m, igns), self.guild.members))
+    
+    async def cog_check(self, ctx: commands.Context):
+        isStaff = self.is_of_group("staff", ctx.author)
+        if not isStaff:
+            staffGroup = ", ".join(self._config["group.staff"])
+            alert = make_alert("You have no permission to use this command",
+                subtext=f"only {staffGroup} can use it")
+            await ctx.send(embed=alert)
+        return isStaff
+
+    @parser("config", isGroup=True)
+    async def display_config(self, ctx: commands.Context):
+        entries = self._config.keys()
+        fmt = lambda k: f"{k}\n{self._config[k]}\n"
+        entries = list(map(fmt, entries))
+        entries[-1] = entries[-1].strip()
+
+        pages = make_entry_pages(entries, maxEntries=5, title="Configuration")
+        await PagedMessage(pages, ctx.channel).init()

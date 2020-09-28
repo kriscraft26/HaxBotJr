@@ -32,13 +32,13 @@ def decorate_text(text, sh="haskell", title=None, info=None,
     return f"```{sh}\n{text}\n```"
 
 
-def slice_entries(entries: List[str]) -> List[List[str]]:
+def slice_entries(entries: List[str], maxEntries=MAX_ENTRY_PER_PAGE) -> List[List[str]]:
     pages = []
     buffer = entries[:]
 
-    while len(buffer) > MAX_ENTRY_PER_PAGE:
-        pages.append(buffer[:MAX_ENTRY_PER_PAGE])
-        buffer = buffer[MAX_ENTRY_PER_PAGE:]
+    while len(buffer) > maxEntries:
+        pages.append(buffer[:maxEntries])
+        buffer = buffer[maxEntries:]
     pages.append(buffer)
 
     return pages
@@ -48,9 +48,8 @@ def make_page_indicator(pageNum, pageIndex) -> str:
     return "○ " * pageIndex + "● " + "○ " * (pageNum - pageIndex - 1)
 
 
-def make_entry_pages(entries, **decoArgs):
-    rankFmt = f"[%-{len(str(len(entries)))}d]  "
-    pages = slice_entries(list(map(lambda _: rankFmt % _[0] + _[1], enumerate(entries))))
+def make_entry_pages(entries, maxEntries=MAX_ENTRY_PER_PAGE, **decoArgs):
+    pages = slice_entries(entries, maxEntries=maxEntries)
     pageNum = len(pages)
 
     pageFmt = lambda _: "\n".join(_[1]) + "\n\n" + make_page_indicator(pageNum, _[0])
@@ -59,10 +58,10 @@ def make_entry_pages(entries, **decoArgs):
 
 def make_stat_entries(lb, igns, members, statSelector):
     maxIgnLen = max(map(len, igns)) if igns else 0
-    entryFmt = f"%-{maxIgnLen}s | %s"
+    entryFmt = f"[%-{len(str(len(lb)))}d]  %-{maxIgnLen}s  |  %s"
 
     entries = []
-    for id_ in lb:
+    for i, id_ in enumerate(lb):
         gMember = members[id_]
-        entries.append(entryFmt % (gMember.ign, statSelector(gMember)))
+        entries.append(entryFmt % (i + 1, gMember.ign, statSelector(gMember)))
     return entries
