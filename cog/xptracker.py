@@ -8,7 +8,7 @@ from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager, GuildMember
 
 
-XP_UPDATE_INTERVAL = 3
+XP_UPDATE_INTERVAL = 6
 
 class XPTracker(commands.Cog):
 
