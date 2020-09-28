@@ -1,62 +1,58 @@
-from typing import TypeVar, Generic, Set, Dict, Union, Tuple, List
+from typing import Set, Dict, Union, Tuple, List, Any
 from os import getenv
 
-from discord import Member, Guild
+from discord import Member, Guild, TextChannel
 from discord.utils import find
 from discord.ext import commands
 
+from logger import Logger
+from msgmaker import decorate_text
 from cog.datacog import DataCog
 
 
-T = TypeVar("T")
-
-
-class Field(Generic[T]):
-
-    def __init__(self, name: str, initValue: T):
-        self.name = name
-        self.val: T = initValue
-    
-    def __repr__(self):
-        return f"<Field {self.name}={self.val}>"
-
-
-@DataCog.register("guildGroup", "staffGroup", "visualRole")
+@DataCog.register("_config")
 class Configuration(commands.Cog):
 
     DATA_FILE = "./data/CONFIGURATION-DATA"
 
     def __init__(self, bot: commands.Bot):
-        self.guildGroup: Field[Set[str]] = Field(
-            "group.guild", 
-            {"Cadet", "Engineer", "Space Pilot", "Rocketeer", "Cosmonaut", "Commander"})
-        self.staffGroup: Field[Set[str]] = Field(
-            "group.staff", 
-            {"Cosmonaut", "Commander"})
-        self.visualRole: Field[Dict[str, Set[str]]] = Field(
-            "visualRole", 
-            {"Top Gunner": {"Space Pilot", "Rocketeer"}})
+        self._config = {
+            "group.guild": {"Cadet", "Engineer", "Space Pilot", "Rocketeer", 
+                            "Cosmonaut", "Commander"},
+            "group.staff": {"Cosmonaut", "Commander"},
+            "visualRole": {
+                "Top Gunner": {"Space Pilot", "Rocketeer"}
+            },
+            "channel.log": None
+        }
         
         targetGuildCheck = lambda g: g.name == getenv("GUILD")
         self.guild: Guild = find(targetGuildCheck, bot.guilds)
+    
+    def __call__(self, configName):
+        return self._config[configName]
+    
+    def _set(self, name, val):
+        Logger.bot.info(f"Config {name}: {self._config[name]} -> {val}")
+        self._config[name] = val
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
-        return self.is_of_group(self.guildGroup, member) and \
+        return self.is_of_group("guild", member) and \
             member.nick.split(" ")[-1] in igns
     
-    def is_of_group(self, group: Field[Set[str]], member: Member) -> bool:
+    def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
         if not rank:
             return False
         roleRank = rank[0]
-        return roleRank in group.val
+        return roleRank in self._config[f"group.{groupName}"]
 
     def get_rank(self, member: Member) -> Union[None, Tuple[str, str]]:
         nick = member.nick
         if not nick or " " not in nick:
             return None
 
-        roleRank = find(lambda r: r.name in self.guildGroup.val, member.roles)
+        roleRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
         if not roleRank:
             return None
         roleRank = roleRank.name
@@ -64,7 +60,8 @@ class Configuration(commands.Cog):
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
 
-        if nameRank in self.visualRole.val and roleRank not in self.visualRole.val[nameRank]:
+        if nameRank in self._config["visualRole"] and \
+           roleRank not in self._config["visualRole"][nameRank]:
             return None
         elif roleRank != nameRank:
             return None

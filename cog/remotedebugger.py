@@ -70,9 +70,9 @@ class RemoteDebugger(commands.Cog):
         self.archives.sort()
     
     async def cog_check(self, ctx: commands.Context):
-        isStaff = self._config.is_of_group(self._config.staffGroup, ctx.author)
+        isStaff = self._config.is_of_group("staff", ctx.author)
         if not isStaff:
-            staffGroup = ", ".join(self._config.staffGroup.val)
+            staffGroup = ", ".join(self._config("group.staff"))
             alert = make_alert("You have no permission to use this command",
                 subtext=f"only {staffGroup} can use it")
             await ctx.send(embed=alert)
