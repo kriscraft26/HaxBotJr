@@ -73,6 +73,7 @@ class Logger:
     war = LoggerPair("war")
     guild = LoggerPair("guild")
     xp = LoggerPair("xp")
+    em = LoggerPair("em")
 
     @classmethod
     def init(cls):
@@ -80,6 +81,7 @@ class Logger:
         cls.war._add_handler()
         cls.guild._add_handler()
         cls.xp._add_handler()
+        cls.em._add_handler()
 
         cls._create_meta()
 
