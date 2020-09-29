@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import make_alert, COLOR_ERROR
-from pagedmessage import PagedMessage
+from reactablemessage import ReactableMessage
 from cog.datacog import DataCog
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
@@ -52,4 +52,4 @@ class HaxBotJr(commands.Bot):
         await ctx.send(embed=alert)
     
     async def on_reaction_add(self, reaction, user):
-        await PagedMessage.update(reaction, user)
+        await ReactableMessage.update(reaction, user)
