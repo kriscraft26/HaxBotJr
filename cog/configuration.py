@@ -20,6 +20,7 @@ class Configuration(commands.Cog):
         "group.guild": {"Cadet", "Engineer", "Space Pilot", "Rocketeer", 
                         "Cosmonaut", "Commander"},
         "group.staff": {"Cosmonaut", "Commander"},
+        "group.trusted": {"Rocketeer", "Cosmonaut", "Commander"},
         "visualRole": {
             "Top Gunner": {"Space Pilot", "Rocketeer"}
         },

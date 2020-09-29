@@ -32,7 +32,7 @@ class GuildMember:
     
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "totalXp", "accXp", "warCount"]
+        properties = ["ign", "discord", "rank", "totalXp", "accXp", "warCount", "emerald"]
         for p in properties:
             if hasattr(self, p):
                 s += f" {p}={getattr(self, p)}"
@@ -42,7 +42,7 @@ class GuildMember:
 IG_MEMBERS_UPDATE_INTERVAL = 3
 
 @DataCog.register("members", "ignIdMap", "removedMembers", "accXpLb", 
-                  "totalXpLb", "warCountLb")
+                  "totalXpLb", "warCountLb", "emeraldLb")
 class MemberManager(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -54,6 +54,7 @@ class MemberManager(commands.Cog):
         self.accXpLb: List[int] = []
         self.totalXpLb: List[int] = []
         self.warCountLb: List[int] = []
+        self.emeraldLb: List[int] = []
 
         self.hasInitMembersUpdate = False
 
@@ -74,6 +75,8 @@ class MemberManager(commands.Cog):
                 for member in allMembers:
                     member.emerald = 0
                     Logger.bot.debug(f"-> {member}")
+                    if member.id in self.members:
+                        self.rank_emerald(member.id)
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
@@ -173,6 +176,7 @@ class MemberManager(commands.Cog):
         self.rank_acc_xp(id_)
         self.rank_total_xp(id_)
         self.rank_war_count(id_)
+        self.rank_emerald(id_)
 
         return gMember
     
@@ -186,6 +190,7 @@ class MemberManager(commands.Cog):
         self.accXpLb.remove(id_)
         self.totalXpLb.remove(id_)
         self.warCountLb.remove(id_)
+        self.emeraldLb.remove(id_)
 
         self.removedMembers[id_] = gMember
     
@@ -224,6 +229,9 @@ class MemberManager(commands.Cog):
     def rank_war_count(self, id_: int):
         self._rank_member(id_, lambda m: m.warCount, self.warCountLb)
     
+    def rank_emerald(self, id_: int):
+        self._rank_member(id_, lambda m: m.emerald, self.emeraldLb)
+    
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
     
@@ -238,21 +246,25 @@ class MemberManager(commands.Cog):
         
         gMember = self.get_member_by_ign(ign)
 
-        maxStatLen = len(str(max([gMember.accXp, gMember.totalXp, gMember.warCount])))
+        maxStatLen = len(str(max([
+            gMember.accXp, gMember.totalXp, gMember.warCount, gMember.emerald])))
 
         accXpRank = self.accXpLb.index(gMember.id) + 1
         totalXpRank = self.totalXpLb.index(gMember.id) + 1
         warCountRank = self.warCountLb.index(gMember.id) + 1
+        emeraldRank = self.emeraldLb.index(gMember.id) + 1
 
-        maxRankLen = len(str(max([accXpRank, totalXpRank, warCountRank])))
+        maxRankLen = len(str(max([accXpRank, totalXpRank, warCountRank, emeraldRank])))
 
-        separator = "-" * (20 + maxStatLen + maxRankLen) + "\n"
+        separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
 
         text = ""
         text += f"Total XP:        %{maxStatLen}d (#{totalXpRank})\n" % gMember.totalXp
         text += f"Accumulated XP:  %{maxStatLen}d (#{accXpRank})\n" % gMember.accXp
         text += separator
         text += f"War Count:       %{maxStatLen}d (#{warCountRank})\n" % gMember.warCount
+        text += separator
+        text += f"Emerald:         %{maxStatLen}d (#{emeraldRank})\n" % gMember.emerald
         text += separator
         text += f"discord {gMember.discord}"
 
