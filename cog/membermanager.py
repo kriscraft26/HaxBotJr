@@ -27,6 +27,8 @@ class GuildMember:
         self.accXp = 0
 
         self.warCount = 0
+
+        self.emerald = 0
     
     def __repr__(self):
         s = "<GuildMember"
@@ -67,11 +69,10 @@ class MemberManager(commands.Cog):
         allMembers = list(self.members.values()) + list(self.removedMembers.values())
         if allMembers:
             sampleMember = allMembers[0]
-            if not hasattr(sampleMember, "discord"):
+            if not hasattr(sampleMember, "emerald"):
                 Logger.bot.debug("detected outdated GuildMember objects, updating...")
                 for member in allMembers:
-                    dMember = self._config.guild.get_member(member.id)
-                    member.discord = f"{dMember.name}#{dMember.discriminator}"
+                    member.emerald = 0
                     Logger.bot.debug(f"-> {member}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
