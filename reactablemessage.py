@@ -27,7 +27,7 @@ class ReactableMessage:
         
         if self.track:
             if len(ReactableMessage.activeMsg) == ReactableMessage.MAX_ACTIVE_MESSAGE:
-                ReactableMessage.activeMsg[0].un_track()
+                await ReactableMessage.activeMsg[0].un_track()
             ReactableMessage.activeMsg.append(self)
     
     async def un_track(self):
