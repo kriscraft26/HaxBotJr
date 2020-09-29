@@ -1,13 +1,14 @@
 from typing import Set, Union, Tuple
 from os import getenv
 
-from discord import Member, Guild, TextChannel
+from discord import Member, Guild, TextChannel, Message
 from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_entry_pages, make_alert
+from msgmaker import make_entry_pages, make_alert, COLOR_SUCCESS
 from pagedmessage import PagedMessage
+from confirmmessage import ConfirmMessage
 from util.cmdutil import parser
 from cog.datacog import DataCog
 
@@ -15,28 +16,42 @@ from cog.datacog import DataCog
 @DataCog.register("_config")
 class Configuration(commands.Cog):
 
-    DATA_FILE = "./data/CONFIGURATION-DATA"
+    DEFAULT_CONFIG = {
+        "group.guild": {"Cadet", "Engineer", "Space Pilot", "Rocketeer", 
+                        "Cosmonaut", "Commander"},
+        "group.staff": {"Cosmonaut", "Commander"},
+        "visualRole": {
+            "Top Gunner": {"Space Pilot", "Rocketeer"}
+        },
+        "channel.xpLog": None
+    }
 
     def __init__(self, bot: commands.Bot):
-        self._config = {
-            "group.guild": {"Cadet", "Engineer", "Space Pilot", "Rocketeer", 
-                            "Cosmonaut", "Commander"},
-            "group.staff": {"Cosmonaut", "Commander"},
-            "visualRole": {
-                "Top Gunner": {"Space Pilot", "Rocketeer"}
-            },
+        self._config = Configuration.DEFAULT_CONFIG
+        self._channels = {
             "channel.xpLog": None
         }
         
         targetGuildCheck = lambda g: g.name == getenv("GUILD")
         self.guild: Guild = find(targetGuildCheck, bot.guilds)
     
+    def __loaded__(self):
+        for key, val in Configuration.DEFAULT_CONFIG.items():
+            self._config.setdefault(key, val)
+        for key in self._channels:
+            if self._config[key]:
+                self._channels[key] = self.guild.get_channel(self._config[key])
+
     def __call__(self, configName):
+        if configName in self._channels:
+            return self._channels[configName]
         return self._config[configName]
     
     def _set(self, name, val):
         Logger.bot.info(f"Config {name}: {self._config[name]} -> {val}")
         self._config[name] = val
+        if name in self._channels:
+            self._channels[name] = self.guild.get_channel(val) if val else None
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
         return self.is_of_group("guild", member) and \
@@ -85,9 +100,30 @@ class Configuration(commands.Cog):
     @parser("config", isGroup=True)
     async def display_config(self, ctx: commands.Context):
         entries = self._config.keys()
-        fmt = lambda k: f"{k}\n{self._config[k]}\n"
+        fmt = lambda k: f"{k}\n{self(k)}\n"
         entries = list(map(fmt, entries))
         entries[-1] = entries[-1].strip()
 
         pages = make_entry_pages(entries, maxEntries=5, title="Configuration")
         await PagedMessage(pages, ctx.channel).init()
+    
+    @parser("config trackXP", parent=display_config)
+    async def set_xp_channel(self, ctx: commands.Context):
+        channel: TextChannel = ctx.channel
+        if self._config["channel.xpLog"]:
+            text = f"Are you sure to disbale xp tracking in #{channel.name}?"
+        else:
+            text = f"Are you sure to track xp in #{channel.name}?"
+
+        await ConfirmMessage(ctx, text, self.set_xp_channel_cb).init()
+    
+    async def set_xp_channel_cb(self, msg: ConfirmMessage):
+        channel: TextChannel = msg.channel
+        if self._config["channel.xpLog"]:
+            self._set("channel.xpLog", None)
+            text = f"Successfully disabled xp tracking in #{channel.name}."
+        else:
+            self._set("channel.xpLog", channel.id)
+            text = f"Successfully set #{channel.name} as xp tracking channel."
+        alert = make_alert(text, color=COLOR_SUCCESS)
+        await msg.edit_message(embed=alert)
