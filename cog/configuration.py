@@ -6,7 +6,7 @@ from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_entry_pages, make_alert, COLOR_SUCCESS
+from msgmaker import make_entry_pages, make_alert
 from pagedmessage import PagedMessage
 from confirmmessage import ConfirmMessage
 from util.cmdutil import parser
@@ -88,7 +88,7 @@ class Configuration(commands.Cog):
     def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
         return set(filter(lambda m: self.is_guild_member(m, igns), self.guild.members))
     
-    async def cog_check(self, ctx: commands.Context):
+    async def staff_check(self, ctx: commands.Context):
         isStaff = self.is_of_group("staff", ctx.author)
         if not isStaff:
             staffGroup = ", ".join(self._config["group.staff"])
@@ -96,6 +96,9 @@ class Configuration(commands.Cog):
                 subtext=f"only {staffGroup} can use it")
             await ctx.send(embed=alert)
         return isStaff
+
+    async def cog_check(self, ctx: commands.Context):
+        return await self.staff_check(ctx) 
 
     @parser("config", isGroup=True)
     async def display_config(self, ctx: commands.Context):
@@ -112,18 +115,16 @@ class Configuration(commands.Cog):
         channel: TextChannel = ctx.channel
         if self._config["channel.xpLog"]:
             text = f"Are you sure to disbale xp tracking in #{channel.name}?"
+            successText = f"Successfully disabled xp tracking in #{channel.name}."
         else:
             text = f"Are you sure to track xp in #{channel.name}?"
+            successText = f"Successfully set #{channel.name} as xp tracking channel."
 
-        await ConfirmMessage(ctx, text, self.set_xp_channel_cb).init()
+        await ConfirmMessage(ctx, text, successText, self.set_xp_channel_cb).init()
     
     async def set_xp_channel_cb(self, msg: ConfirmMessage):
         channel: TextChannel = msg.channel
         if self._config["channel.xpLog"]:
             self._set("channel.xpLog", None)
-            text = f"Successfully disabled xp tracking in #{channel.name}."
         else:
             self._set("channel.xpLog", channel.id)
-            text = f"Successfully set #{channel.name} as xp tracking channel."
-        alert = make_alert(text, color=COLOR_SUCCESS)
-        await msg.edit_message(embed=alert)

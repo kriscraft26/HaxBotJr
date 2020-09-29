@@ -3,9 +3,11 @@ from discord.ext import tasks, commands
 from logger import Logger
 from msgmaker import *
 from pagedmessage import PagedMessage
+from confirmmessage import ConfirmMessage
 from util.cmdutil import parser
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager, GuildMember
+from cog.configuration import Configuration
 
 
 XP_UPDATE_INTERVAL = 6
@@ -16,8 +18,8 @@ class XPTracker(commands.Cog):
     def __init__(self, bot: commands.Bot):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
-        
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
+        self._config: Configuration = bot.get_cog("Configuration")
 
         self._update.start()
 
@@ -57,6 +59,9 @@ class XPTracker(commands.Cog):
         for member in self._memberManager.members.values():
             member.accXp = 0
     
+    async def _staff_check(self, ctx):
+        return await self._config.staff_check(ctx)
+    
     @parser("xp", ["total"], isGroup=True)
     async def display_xp_lb(self, ctx: commands.Context, total):
         lb = self._memberManager.totalXpLb if total else self._memberManager.accXpLb
@@ -70,5 +75,9 @@ class XPTracker(commands.Cog):
         await PagedMessage(pages, ctx.channel).init()
     
     @parser("xp reset", parent=display_xp_lb)
+    @commands.check(_staff_check)
     async def reset_xp_cmd(self, ctx: commands.Context):
-        self.reset_xp()
+        text = "Are you sure to reset all members' accumulated xp?"
+        successText = "Successfully reset all members' accumulated xp."
+
+        await ConfirmMessage(ctx, text, successText, lambda msg: self.reset_xp()).init()
