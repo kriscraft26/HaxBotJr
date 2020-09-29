@@ -36,6 +36,7 @@ class DateClock(commands.Cog):
         if self.initRun:
             self.initRun = False
             return
+        Logger.bot.debug(f"start daily loop {timeutil.now()} with bwIndex {self.bwIndex}")
         
         Logger.reset()
 
