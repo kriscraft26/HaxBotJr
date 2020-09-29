@@ -44,12 +44,15 @@ class HaxBotJr(commands.Bot):
 
     async def on_command_error(self, ctx: commands.Context, e: commands.CommandError):
         cmd = str(ctx.command)
-        if hasattr(ctx.cog, "cog_check"):
+        if self.should_suppress_error(e):
             msg = ctx.message
             print(f"suppressed error: {e} from '{msg.content}' in #{msg.channel}")
             return
         alert = make_alert(str(e), title="Command Error")
         await ctx.send(embed=alert)
+    
+    def should_suppress_error(self, e: commands.CommandError):
+        return str(e).startswith("The check functions")
     
     async def on_reaction_add(self, reaction, user):
         await ReactableMessage.update(reaction, user)
