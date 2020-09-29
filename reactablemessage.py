@@ -13,8 +13,8 @@ class ReactableMessage:
         self.channel = channel
         self.track = track
     
-    def add_callback(self, reaction, cb):
-        self._reactions[reaction] = cb
+    def add_callback(self, reaction, cb, provideSelf=False):
+        self._reactions[reaction] = (cb, provideSelf)
     
     async def _init_send(self) -> Message:
         raise NotImplementedError()
@@ -27,7 +27,7 @@ class ReactableMessage:
         
         if self.track:
             if len(ReactableMessage.activeMsg) == ReactableMessage.MAX_ACTIVE_MESSAGE:
-                ReactableMessage.activeMsg = ReactableMessage.activeMsg[1:]
+                ReactableMessage.activeMsg[0].un_track()
             ReactableMessage.activeMsg.append(self)
     
     async def un_track(self):
@@ -52,5 +52,9 @@ class ReactableMessage:
                 if msg.userId and user.id != msg.userId:
                     return
                 if reaction.emoji in msg._reactions:
-                    await msg._reactions[reaction.emoji]()
+                    (cb, provideSelf) = msg._reactions[reaction.emoji]
+                    if provideSelf:
+                        await cb(msg)
+                    else:
+                        await cb()
                 
