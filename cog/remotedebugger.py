@@ -70,4 +70,4 @@ class RemoteDebugger(commands.Cog):
         self.archives.sort()
     
     async def cog_check(self, ctx: commands.Context):
-        return await self._config.staff_check(ctx)
+        return await self._config.group_check(ctx, "staff")

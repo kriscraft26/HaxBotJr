@@ -59,9 +59,6 @@ class XPTracker(commands.Cog):
         for member in self._memberManager.members.values():
             member.accXp = 0
     
-    async def _staff_check(self, ctx):
-        return await self._config.staff_check(ctx)
-    
     @parser("xp", ["total"], isGroup=True)
     async def display_xp_lb(self, ctx: commands.Context, total):
         lb = self._memberManager.totalXpLb if total else self._memberManager.accXpLb
@@ -75,8 +72,10 @@ class XPTracker(commands.Cog):
         await PagedMessage(pages, ctx.channel).init()
     
     @parser("xp reset", parent=display_xp_lb)
-    @commands.check(_staff_check)
     async def reset_xp_cmd(self, ctx: commands.Context):
+        if not await self._config.group_check(ctx, "staff"):
+            return
+
         text = "Are you sure to reset all members' accumulated xp?"
         successText = "Successfully reset all members' accumulated xp."
 
