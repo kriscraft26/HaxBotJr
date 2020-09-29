@@ -22,9 +22,11 @@ def make_alert(text, title="", subtext=None, color: int=COLOR_ERROR) -> Embed:
 
 
 def decorate_text(text, sh="haskell", title=None, info=None, 
-        api: WynnData.Tracker=None) -> str:
+        api=None, lastUpdate=None) -> str:
     if api:
         text = f"{text}\n\nUpdated {api.getLastUpdateDTime().seconds}s ago."
+    elif lastUpdate:
+        text = f"{text}\n\nLast updated at {lastUpdate}."
     if info:
         text = f"{info}\n\n{text}"
     if title:
