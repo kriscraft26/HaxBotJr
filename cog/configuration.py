@@ -33,8 +33,7 @@ class Configuration(commands.Cog):
             "channel.xpLog": None
         }
         
-        targetGuildCheck = lambda g: g.name == getenv("GUILD")
-        self.guild: Guild = find(targetGuildCheck, bot.guilds)
+        self.guild: Guild = bot.guilds[0]
     
     def __loaded__(self):
         for key, val in Configuration.DEFAULT_CONFIG.items():
