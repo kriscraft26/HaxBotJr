@@ -32,7 +32,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataCog.load(MemberManager, self))
         self.add_cog(XPTracker(self))
         self.add_cog(DataCog.load(WarTracker, self))
-        self.add_cog(EmeraldTracker(self))
+        self.add_cog(DataCog.load(EmeraldTracker, self))
         self.add_cog(DateClock(self))
         self.add_cog(RemoteDebugger(self))
 
