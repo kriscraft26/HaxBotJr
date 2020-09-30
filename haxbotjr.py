@@ -25,8 +25,6 @@ class HaxBotJr(commands.Bot):
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
 
-        DataCog.init(self)
-
         self.add_cog(DataCog.load(Configuration, self))
         self.add_cog(WynnAPI(HaxBotJr.session))
         self.add_cog(DataCog.load(MemberManager, self))

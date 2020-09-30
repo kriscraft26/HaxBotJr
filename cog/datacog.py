@@ -10,18 +10,13 @@ SAVE_INTERVAL = 10
 
 class DataCog:
 
-    _subClasses = {}
-    _bot: commands.Bot = None
-
-    @classmethod
-    def init(cls, bot: commands.Bot):
-        cls._bot = bot
+    _cogs = {}
 
     @classmethod
     def register(cls, *attributes):
         def decorator(class_):
             Logger.bot.debug(f"{class_} registered as data cog with attributes {attributes}")
-            cls._subClasses[class_] = [attributes, None]
+            cls._cogs[class_] = [attributes, None]
             def cog_unload(self):
                 Logger.bot.debug(f"saving data of {class_.__name__}")
                 cls._save_cls(class_)
@@ -39,7 +34,7 @@ class DataCog:
         data = PickleUtil.load(cls._get_data_file(targetCls))
 
         cog = targetCls(*args, **kwargs)
-        cls._subClasses[targetCls][1] = cog
+        cls._cogs[targetCls][1] = cog
 
         loadCb = getattr(cog, "__loaded__", lambda: 0)
 
@@ -48,7 +43,7 @@ class DataCog:
             loadCb()
             return cog
         
-        attributes = cls._subClasses[targetCls][0]
+        attributes = cls._cogs[targetCls][0]
         attrMap = list(zip(attributes, data))
         Logger.bot.debug(f"Data file found for data cog {targetCls}: {list(attrMap)}")
 
@@ -60,7 +55,7 @@ class DataCog:
     
     @classmethod
     def _save_cls(cls, targetCls):
-        [attributes, instance] = cls._subClasses[targetCls]
+        [attributes, instance] = cls._cogs[targetCls]
         values = list(map(lambda attr: getattr(instance, attr), attributes))
         PickleUtil.save(cls._get_data_file(targetCls), values)
 
@@ -69,7 +64,7 @@ class DataCog:
 
     @tasks.loop(seconds=SAVE_INTERVAL)
     async def _save_loop(self):
-        for class_ in DataCog._subClasses.keys():
+        for class_ in DataCog._cogs.keys():
             DataCog._save_cls(class_)
     
     @_save_loop.before_loop
