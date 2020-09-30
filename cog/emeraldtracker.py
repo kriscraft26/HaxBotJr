@@ -59,6 +59,7 @@ class EmeraldTracker(commands.Cog):
                 em = int(sections[2][:-1])
                 Logger.em.info(f"{ign} em update {member.emerald} -> {em}")
                 member.emerald = em
+                self._memberManager.rank_emerald(member.id)
 
     @parser("em", isGroup=True)
     async def display_emerald(self, ctx: commands.Context):
