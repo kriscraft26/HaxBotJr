@@ -7,6 +7,7 @@ from util.timeutil import now
 from msgmaker import *
 from reactablemessage import ReactableMessage
 from pagedmessage import PagedMessage
+from confirmmessage import ConfirmMessage
 from cog.datacog import DataCog
 from cog.configuration import Configuration
 from cog.membermanager import MemberManager
@@ -60,6 +61,11 @@ class EmeraldTracker(commands.Cog):
                 Logger.em.info(f"{ign} em update {member.emerald} -> {em}")
                 member.emerald = em
                 self._memberManager.rank_emerald(member.id)
+    
+    def reset_em(self):
+        Logger.em.info("Resetting all emeralds")
+        for member in self._memberManager.members.values():
+            member.emerald = 0
 
     @parser("em", isGroup=True)
     async def display_emerald(self, ctx: commands.Context):
@@ -102,3 +108,13 @@ class EmeraldTracker(commands.Cog):
         alert = make_alert("Action canceled", color=COLOR_SUCCESS)
         await msg.edit_message(embed=alert)
         await msg.un_track()
+    
+    @parser("em reset", parent=display_emerald)
+    async def reset_em_cmd(self, ctx: commands.Context):
+        if not await self._config.group_check(ctx, "staff"):
+            return
+        
+        text = "Are you sure to reset all members' emerald?"
+        successText = "Successfully reset all members' emerald."
+
+        await ConfirmMessage(ctx, text, successText, lambda msg: self.reset_em()).init()
