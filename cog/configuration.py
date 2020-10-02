@@ -38,6 +38,11 @@ class Configuration(commands.Cog):
     def __loaded__(self):
         for key, val in Configuration.DEFAULT_CONFIG.items():
             self._config.setdefault(key, val)
+        removedKeys = set(self._config.keys()).difference(
+            set(Configuration.DEFAULT_CONFIG.keys()))
+        for key in removedKeys:
+            del self._config[key]
+        
         for key in self._channels:
             if self._config[key]:
                 self._channels[key] = self.guild.get_channel(self._config[key])
