@@ -48,7 +48,10 @@ class DataCog:
         Logger.bot.debug(f"Data file found for data cog {targetCls}: {list(attrMap)}")
 
         for attr, val in attrMap:
-            setattr(cog, attr, val)
+            if hasattr(cog, attr):
+                setattr(cog, attr, val)
+            else:
+                Logger.bot.debug(f"Skipped loading {cog.__class__}.{attr}")
         loadCb()
 
         return cog
