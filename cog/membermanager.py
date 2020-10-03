@@ -88,7 +88,7 @@ class MemberManager(commands.Cog):
                         LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
                         LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
                         LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
-                        LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.tot)
+                        LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.total)
 
                     Logger.bot.debug(f"-> {member}")
     
@@ -186,7 +186,7 @@ class MemberManager(commands.Cog):
             LeaderBoard.get_lb("xpTotal").add_stat(gMember.xp.total)
             LeaderBoard.get_lb("warCount").add_stat(gMember.warCount)
             LeaderBoard.get_lb("emeraldAcc").add_stat(gMember.emerald.acc)
-            LeaderBoard.get_lb("emeraldTotal").add_stat(gMember.emerald.tot)
+            LeaderBoard.get_lb("emeraldTotal").add_stat(gMember.emerald.total)
         else:
             gMember = GuildMember(dMember)
         
@@ -206,7 +206,7 @@ class MemberManager(commands.Cog):
         LeaderBoard.get_lb("xpTotal").remove_stat(gMember.xp.total)
         LeaderBoard.get_lb("warCount").remove_stat(gMember.warCount)
         LeaderBoard.get_lb("emeraldAcc").remove_stat(gMember.emerald.acc)
-        LeaderBoard.get_lb("emeraldTotal").remove_stat(gMember.emerald.tot)
+        LeaderBoard.get_lb("emeraldTotal").remove_stat(gMember.emerald.total)
 
         self.removedMembers[id_] = gMember
     
@@ -282,4 +282,4 @@ class MemberManager(commands.Cog):
             LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
             LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
             LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
-            LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.tot)
+            LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.total)
