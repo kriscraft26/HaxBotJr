@@ -48,11 +48,11 @@ class DataManager(commands.Cog):
                     setattr(obj, attr, val)
                 else:
                     Logger.bot.debug(f"failed to load {attr}")
-        
-            if hasattr(obj, "__loaded__"):
-                getattr(obj, "__loaded__")()
         else:
             Logger.bot.debug(f"data not found")
+        
+        if hasattr(obj, "__loaded__"):
+            getattr(obj, "__loaded__")()
         
         DataManager._classes[targetCls][1].add(obj)
         return obj
