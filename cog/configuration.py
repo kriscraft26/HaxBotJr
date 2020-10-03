@@ -25,6 +25,9 @@ class Configuration(commands.Cog):
         "visualRole": {
             "Top Gunner": {"Space Pilot", "Rocketeer"}
         },
+        "roleAlias": {
+            "Commander": {"Commandress"}
+        },
         "channel.xpLog": None
     }
 
@@ -75,21 +78,35 @@ class Configuration(commands.Cog):
         if not nick or " " not in nick:
             return None
 
-        roleRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
+        roleRank = member.top_role
         if not roleRank:
             return None
         roleRank = roleRank.name
-        
+
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
 
-        if nameRank in self._config["visualRole"]:
-            if roleRank not in self._config["visualRole"][nameRank]:
-                return None
-        elif roleRank != nameRank:
+        if roleRank != nameRank:
+            if roleRank in self._config["roleAlias"] and \
+               nameRank in self._config["roleAlias"][roleRank]:
+                return (roleRank, None)
+            print(f"{nick}: role-name mismatch")
             return None
-        
-        return (roleRank, nameRank)
+
+        if roleRank in self._config["group.guild"]:
+            return (roleRank, None)
+        elif roleRank in self._config["visualRole"]:
+            guildRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
+            if not guildRank:
+                print(f"{nick}: non guild member with visual role")
+                return None
+            guildRank = guildRank.name
+            if guildRank not in self._config["visualRole"][roleRank]:
+                print(f"{nick}: visual rank mismatch")
+                return None
+            return (guildRank, roleRank)
+
+        return None
     
     def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
         return set(filter(lambda m: self.is_guild_member(m, igns), self.guild.members))
