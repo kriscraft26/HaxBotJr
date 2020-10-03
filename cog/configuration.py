@@ -17,10 +17,10 @@ from cog.datamanager import DataManager
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
-        "group.guild": {"Cadet", "Engineer", "Space Pilot", "Rocketeer", 
-                        "Cosmonaut", "Commander"},
-        "group.staff": {"Cosmonaut", "Commander"},
-        "group.trusted": {"Rocketeer", "Cosmonaut", "Commander"},
+        "group.guild": ["Commander", "Cosmonaut", "Rocketeer", "Space Pilot", 
+                        "Engineer", "Cadet"],
+        "group.staff": ["Commander", "Cosmonaut"],
+        "group.trusted": ["Commander", "Cosmonaut", "Rocketeer"],
         "user.dev": {"Pucaet#9528"},
         "visualRole": {
             "Top Gunner": {"Space Pilot", "Rocketeer"}
@@ -68,7 +68,7 @@ class Configuration(commands.Cog):
         if self.is_of_group("guild", member):
             inGuild = member.nick.split(" ")[-1] in igns
             if not inGuild:
-                print(f"{member}: non-guild member with guild role")
+                print(f"{member.nick}: non-guild member with guild role")
                 return False
             return True
         return False
