@@ -4,16 +4,17 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from msgmaker import *
+from statistic import LeaderBoard
 from pagedmessage import PagedMessage
 from util.cmdutil import parser
-from cog.datacog import DataCog
+from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
 
 
 WAR_SERVERS_UPDATE_INTERVAL = 3
 
-@DataCog.register("currentWar")
+@DataManager.register("currentWar")
 class WarTracker(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -74,9 +75,7 @@ class WarTracker(commands.Cog):
     
     def _incrememt_war_count(self, ign: str):
         member = self._memberManager.get_member_by_ign(ign)
-        Logger.war.info(f"{ign} warCount +1 from {member.warCount}")
-        member.warCount += 1
-        self._memberManager.rank_war_count(member.id)
+        member.warCount.val += 1
     
     @_update.before_loop
     async def _before_update(self):
@@ -85,18 +84,13 @@ class WarTracker(commands.Cog):
     def reset_war_count(self):
         Logger.bot.info("resetting all accumulated war counts")
         for member in self._memberManager.members.values():
-            member.warCount = 0
+            member.warCount.val = 0
 
     @parser("wc")
     async def display_war_count_lb(self, ctx: commands.Context):
-        lb = self._memberManager.warCountLb
-        igns = self._memberManager.ignIdMap.keys()
-        members = self._memberManager.members
-        statSelector = lambda m: m.warCount
-        title = "War Count Leader Board"
-
-        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector), 
+        pages = LeaderBoard.get_lb("warCount").create_pages(
             title="War Count Leader Board", api=self._serverListTracker)
+
         await PagedMessage(pages, ctx.channel).init()
 
 

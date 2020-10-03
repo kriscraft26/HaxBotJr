@@ -1,13 +1,15 @@
 from aiohttp import ClientSession
 from asyncio import run
 
+from discord import Activity, ActivityType
 from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
+from statistic import LeaderBoard
 from msgmaker import make_alert, COLOR_ERROR
 from reactablemessage import ReactableMessage
-from cog.datacog import DataCog
+from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
@@ -22,19 +24,26 @@ class HaxBotJr(commands.Bot):
     session = ClientSession()
 
     async def on_ready(self):
+        await self.change_presence(activity=Activity(type=ActivityType.watching, name="you"))
+
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
 
-        self.add_cog(DataCog.load(Configuration, self))
+        DataManager.load(LeaderBoard("xpTotal", Logger.xp))
+        DataManager.load(LeaderBoard("xpAcc", Logger.xp))
+        DataManager.load(LeaderBoard("emeraldTotal", Logger.em))
+        DataManager.load(LeaderBoard("emeraldAcc", Logger.em))
+        DataManager.load(LeaderBoard("warCount", Logger.war))
+
+        self.add_cog(DataManager.load(Configuration(self)))
         self.add_cog(WynnAPI(HaxBotJr.session))
-        self.add_cog(DataCog.load(MemberManager, self))
+        self.add_cog(DataManager.load(MemberManager(self)))
         self.add_cog(XPTracker(self))
-        self.add_cog(DataCog.load(WarTracker, self))
-        self.add_cog(DataCog.load(EmeraldTracker, self))
+        self.add_cog(DataManager.load(WarTracker(self)))
+        self.add_cog(DataManager.load(EmeraldTracker(self)))
         self.add_cog(DateClock(self))
         self.add_cog(RemoteDebugger(self))
-
-        DataCog().start_saving_loop()
+        self.add_cog(DataManager())
 
     @classmethod
     def exit(cls):

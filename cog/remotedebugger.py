@@ -10,7 +10,6 @@ from logger import DEBUG_FILE, ARCHIVE_FOLDER
 from msgmaker import *
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil
-from cog.datacog import DataCog
 from cog.configuration import Configuration
 
 

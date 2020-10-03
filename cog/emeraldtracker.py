@@ -2,18 +2,19 @@ from discord import Message
 from discord.ext import commands
 
 from logger import Logger
-from util.cmdutil import parser
-from util.timeutil import now
 from msgmaker import *
+from statistic import LeaderBoard
 from reactablemessage import ReactableMessage
 from pagedmessage import PagedMessage
 from confirmmessage import ConfirmMessage
-from cog.datacog import DataCog
+from util.cmdutil import parser
+from util.timeutil import now
+from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.membermanager import MemberManager
 
 
-@DataCog.register("lastUpdateTimeStr")
+@DataManager.register("lastUpdateTimeStr")
 class EmeraldTracker(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -58,25 +59,20 @@ class EmeraldTracker(commands.Cog):
             if ign in self._memberManager.ignIdMap:
                 member = self._memberManager.get_member_by_ign(ign)
                 em = int(sections[2][:-1])
-                Logger.em.info(f"{ign} em update {member.emerald} -> {em}")
-                member.emerald = em
-                self._memberManager.rank_emerald(member.id)
+                member.emerald.accumulate(em)
     
     def reset_em(self):
         Logger.em.info("Resetting all emeralds")
         for member in self._memberManager.members.values():
-            member.emerald = 0
+            member.emerald.reset()
 
-    @parser("em", isGroup=True)
-    async def display_emerald(self, ctx: commands.Context):
-        lb = self._memberManager.emeraldLb
-        igns = self._memberManager.ignIdMap.keys()
-        members = self._memberManager.members
-        statSelector = lambda m: m.emerald
-        title = "Emerald Contribution Leader Board"
-        
-        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
+    @parser("em", ["total"], isGroup=True)
+    async def display_emerald(self, ctx: commands.Context, total):
+        title = ("Total" if total else "Accumulated") + " Emerald Contribution Leader Board"
+        lbName = "emeraldTotal" if total else "emeraldAcc"
+        pages = LeaderBoard.get_lb(lbName).create_pages(
             title=title, lastUpdate=self.lastUpdateTimeStr)
+
         await PagedMessage(pages, ctx.channel).init()
 
     @parser("em parse", parent=display_emerald)

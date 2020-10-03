@@ -10,10 +10,10 @@ from msgmaker import make_entry_pages, make_alert
 from pagedmessage import PagedMessage
 from confirmmessage import ConfirmMessage
 from util.cmdutil import parser
-from cog.datacog import DataCog
+from cog.datamanager import DataManager
 
 
-@DataCog.register("_config")
+@DataManager.register("_config")
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
