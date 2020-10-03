@@ -276,8 +276,9 @@ class MemberManager(commands.Cog):
     
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
-        for member in self.members.values():
-            if type(member.warCount) == int:
-                wc = member.warCount
-                member.warCount = Statistic("warCount", member.id, initVal=0)
-                member.warCount.val = wc
+        for member in self.removedMembers.values():
+            LeaderBoard.get_lb("xpAcc").remove_stat(member.xp.acc)
+            LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
+            LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
+            LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
+            LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.total)

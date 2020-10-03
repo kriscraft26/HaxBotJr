@@ -5,15 +5,15 @@ from cog.datamanager import DataManager
 
 class Statistic:
 
-    def __init__(self, name: str, id_: int, initVal: int=-1):
+    def __init__(self, name: str, id_: int, initVal: int=-1, _fromReduce=False):
         self.name = name
         self.lb: LeaderBoard = LeaderBoard.get_lb(name)
         self.id = id_
         super().__setattr__("val", initVal)
-        self.lb.add_stat(self)
+        not _fromReduce and self.lb.add_stat(self)
     
     def __reduce__(self):
-        return (self.__class__, (self.name, self.id, self.val))
+        return (self.__class__, (self.name, self.id, self.val, True))
 
     def __repr__(self):
         return f"<Statistic {self.name}={self.val}>"
