@@ -85,10 +85,10 @@ class Configuration(commands.Cog):
         if not nick or " " not in nick:
             return None
 
-        roleRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
+        memberRoles = list(map(lambda r: r.name, member.roles))
+        roleRank = find(lambda r: r in memberRoles, self._config["group.guild"])
         if not roleRank:
             return None
-        roleRank = roleRank.name
 
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
