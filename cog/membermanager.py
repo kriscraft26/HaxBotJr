@@ -15,13 +15,13 @@ from cog.datamanager import DataManager
 
 class GuildMember:
 
-    def __init__(self, dMember: Member):
+    def __init__(self, dMember: Member, rank: str):
         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
         self.id: int = dMember.id
         self.discord = f"{dMember.name}#{dMember.discriminator}"
 
         seg = dMember.nick.split(" ")
-        self.rank = " ".join(seg[:-1])
+        self.rank = rank
         self.ign: str = seg[-1]
 
         self.xp = AccumulatedStatistic("xp", self.id)
@@ -187,7 +187,7 @@ class MemberManager(commands.Cog):
             LeaderBoard.get_lb("emeraldAcc").add_stat(gMember.emerald.acc)
             LeaderBoard.get_lb("emeraldTotal").add_stat(gMember.emerald.total)
         else:
-            gMember = GuildMember(dMember)
+            gMember = GuildMember(dMember, self._config.get_rank(dMember)[0])
         
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
