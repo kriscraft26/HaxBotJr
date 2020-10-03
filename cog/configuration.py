@@ -64,12 +64,14 @@ class Configuration(commands.Cog):
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
         ofGroup = self.is_of_group("guild", member)
-        inGuild = member.nick.split(" ")[-1] in igns
-        if ofGroup and not inGuild:
-            print(f"{member}: non-guild member with guild role")
-        elif not ofGroup and inGuild:
-            print(f"{member}: guild member with out guild role")
-        return ofGroup
+
+        if self.is_of_group("guild", member):
+            inGuild = member.nick.split(" ")[-1] in igns
+            if not inGuild:
+                print(f"{member}: non-guild member with guild role")
+                return False
+            return True
+        return False
     
     def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
