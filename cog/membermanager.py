@@ -274,9 +274,15 @@ class MemberManager(commands.Cog):
             title=title)
         await PagedMessage(pages, ctx.channel).init()
     
+    @parser("members missing", parent=display_members)
+    async def display_missing_members(self, ctx: commands.Context):
+        trackedIgns = set(self.ignIdMap.keys())
+        missingIgns = self._igMembers.difference(trackedIgns)
+        await ctx.send(", ".join(missingIgns))
+
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
-        if not self._config.perm_check(ctx, "user.dev"):
+        if not await self._config.perm_check(ctx, "user.dev"):
             return
         for member in self.members.values():
             if member.rank == "Commander":
