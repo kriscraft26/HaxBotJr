@@ -21,6 +21,7 @@ class Configuration(commands.Cog):
                         "Cosmonaut", "Commander"},
         "group.staff": {"Cosmonaut", "Commander"},
         "group.trusted": {"Rocketeer", "Cosmonaut", "Commander"},
+        "user.dev": {"Pucaet#9528"},
         "visualRole": {
             "Top Gunner": {"Space Pilot", "Rocketeer"}
         },
@@ -82,9 +83,9 @@ class Configuration(commands.Cog):
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
 
-        if nameRank in self._config["visualRole"] and \
-           roleRank not in self._config["visualRole"][nameRank]:
-            return None
+        if nameRank in self._config["visualRole"]:
+            if roleRank not in self._config["visualRole"][nameRank]:
+                return None
         elif roleRank != nameRank:
             return None
         
