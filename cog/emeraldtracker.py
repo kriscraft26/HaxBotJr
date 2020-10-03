@@ -77,7 +77,7 @@ class EmeraldTracker(commands.Cog):
 
     @parser("em parse", parent=display_emerald)
     async def start_parse(self, ctx: commands.Context):
-        if not await self._config.group_check(ctx, "trusted"):
+        if not await self._config.perm_check(ctx, "group.trusted"):
             return
 
         if self.provider:
@@ -107,7 +107,7 @@ class EmeraldTracker(commands.Cog):
     
     @parser("em reset", parent=display_emerald)
     async def reset_em_cmd(self, ctx: commands.Context):
-        if not await self._config.group_check(ctx, "staff"):
+        if not await self._config.perm_check(ctx, "group.staff"):
             return
         
         text = "Are you sure to reset all members' emerald?"

@@ -276,6 +276,8 @@ class MemberManager(commands.Cog):
     
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
+        if not self._config.perm_check(ctx, "user.dev"):
+            return
         for member in self.members.values():
             if member.rank == "Commander":
                 member.rank = "Cosmonaut"

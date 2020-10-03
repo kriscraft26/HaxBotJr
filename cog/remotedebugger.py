@@ -69,4 +69,4 @@ class RemoteDebugger(commands.Cog):
         self.archives.sort()
     
     async def cog_check(self, ctx: commands.Context):
-        return await self._config.group_check(ctx, "staff")
+        return await self._config.perm_check(ctx, "user.dev")

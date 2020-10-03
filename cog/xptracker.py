@@ -55,7 +55,7 @@ class XPTracker(commands.Cog):
     
     @parser("xp reset", parent=display_xp_lb)
     async def reset_xp_cmd(self, ctx: commands.Context):
-        if not await self._config.group_check(ctx, "staff"):
+        if not await self._config.perm_check(ctx, "group.staff"):
             return
 
         text = "Are you sure to reset all members' accumulated xp?"

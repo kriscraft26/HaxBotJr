@@ -123,17 +123,19 @@ class Configuration(commands.Cog):
     def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
         return set(filter(lambda m: self.is_guild_member(m, igns), self.guild.members))
 
-    async def group_check(self, ctx: commands.Context, groupName):
-        isInGroup = self.is_of_group(groupName, ctx.author)
-        if not isInGroup:
-            staffGroup = ", ".join(self._config[f"group.{groupName}"])
+    async def perm_check(self, ctx: commands.Context, fieldName):
+        type_, name = fieldName.split(".")
+        checker = self.is_of_group if type_ == "group" else self.is_of_user
+        passed = checker(name, ctx.author)
+        if not passed:
+            staffGroup = ", ".join(self._config[fieldName])
             alert = make_alert("You have no permission to use this command",
                 subtext=f"only {staffGroup} can use it")
             await ctx.send(embed=alert)
-        return isInGroup
+        return passed
 
     async def cog_check(self, ctx: commands.Context):
-        return await self.group_check(ctx, "staff")
+        return await self.perm_check(ctx, "group.staff")
 
     @parser("config", isGroup=True)
     async def display_config(self, ctx: commands.Context):
