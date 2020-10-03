@@ -258,7 +258,7 @@ class MemberManager(commands.Cog):
         text = decorate_text(text, title=title)
         await ctx.send(text)
     
-    @parser("members", ["removed"])
+    @parser("members", ["removed"], isGroup=True)
     async def display_members(self, ctx: commands.Context, removed):
         if removed:
             lb = self.removedMembers.keys()
@@ -274,3 +274,12 @@ class MemberManager(commands.Cog):
         pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
             title=title)
         await PagedMessage(pages, ctx.channel).init()
+    
+    @parser("members fix", parent=display_members)
+    async def fix_members(self, ctx):
+        for member in self.removedMembers:
+            LeaderBoard.get_lb("xpAcc").remove_stat(member.xp.acc)
+            LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
+            LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
+            LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
+            LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.tot)
