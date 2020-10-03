@@ -142,10 +142,9 @@ class MemberManager(commands.Cog):
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
             gMember.rank = currRank
             Logger.war.info(f"{gMember.ign} war count reset from {gMember.warCount}")
-            gMember.warCount = 0
-            self.rank_war_count(gMember.id)
+            gMember.warCount.val = 0
         
-        currIgn = dMember.nick.replace(currRank, "").strip()
+        currIgn = dMember.nick.split(" ")[-1]
         if gMember.ign != currIgn:
             Logger.guild.info(f"{gMember.ign} changed ign to {currIgn}")
             del self.ignIdMap[gMember.ign]
@@ -277,9 +276,8 @@ class MemberManager(commands.Cog):
     
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
-        for member in self.removedMembers.values():
-            LeaderBoard.get_lb("xpAcc").remove_stat(member.xp.acc)
-            LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
-            LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
-            LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
-            LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.total)
+        for member in self.members.values():
+            if type(member.warCount) == int:
+                wc = member.warCount
+                member.warCount = Statistic("warCount", member.id, initVal=0)
+                member.warCount.val = wc
