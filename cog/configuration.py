@@ -22,10 +22,14 @@ class Configuration(commands.Cog):
         "group.staff": ["Cosmonaut"],
         "group.trusted": ["Cosmonaut", "Rocketeer"],
         "user.dev": {"Pucaet#9528"},
-        "visualRole": {
+        "user.ignore": {"Kyoto#1414"},
+        "role.visual": {
             "Top Gunner": {"Space Pilot", "Rocketeer"},
             "Commander": {"Cosmonaut"},
             "Commandress": {"Cosmonaut"}
+        },
+        "role.personal": {
+            "Princess": {"pontosaurus#6727"}
         },
         "channel.xpLog": None
     }
@@ -62,6 +66,9 @@ class Configuration(commands.Cog):
             self._channels[name] = self.guild.get_channel(val) if val else None
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
+        if self.is_of_user("ignore", member):
+            return False
+
         ofGroup = self.is_of_group("guild", member)
 
         if self.is_of_group("guild", member):
@@ -78,6 +85,9 @@ class Configuration(commands.Cog):
             return False
         roleRank = rank[0]
         return roleRank in self._config[f"group.{groupName}"]
+    
+    def is_of_user(self, userName: str, member: Member) -> bool:
+        return str(member) in self._config[f"user.{userName}"]
 
     def get_rank(self, member: Member) -> Union[None, Tuple[str, str]]:
         nick = member.nick
@@ -95,10 +105,16 @@ class Configuration(commands.Cog):
         if roleRank == nameRank:
             return (roleRank, None)
         
-        if nameRank in self._config["visualRole"]:
-            if roleRank in self._config["visualRole"][nameRank]:
+        if nameRank in self._config["role.visual"]:
+            if roleRank in self._config["role.visual"][nameRank]:
                 return (roleRank, nameRank)
             print(f"{nick}: visual role mismatch")
+            return None
+        
+        if nameRank in self._config["role.personal"]:
+            if str(member) in self._config["role.personal"][nameRank]:
+                return (roleRank, nameRank)
+            print(f"{nick}: personal role mismatch")
             return None
         
         print(f"{nick}: rank role mismatch")
