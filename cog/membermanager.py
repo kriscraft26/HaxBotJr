@@ -83,6 +83,13 @@ class MemberManager(commands.Cog):
                     member.emerald = AccumulatedStatistic("emerald", member.id)
                     member.emerald.total.val = prev if prev else -1
 
+                    if member.id in self.removedMembers:
+                        LeaderBoard.get_lb("xpAcc").remove_stat(member.xp.acc)
+                        LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
+                        LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
+                        LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
+                        LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.tot)
+
                     Logger.bot.debug(f"-> {member}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
