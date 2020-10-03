@@ -88,6 +88,8 @@ class LeaderBoard:
     def get_ign(self, stat: Statistic):
         if not LeaderBoard._memberManager:
             return str(stat.id)
+        if stat.id in LeaderBoard._memberManager.removedMembers:
+            return LeaderBoard._memberManager.removedMembers[stat.id]
         return LeaderBoard._memberManager.members[stat.id].ign
 
     def log_change(self, prevVal: int, stat: Statistic):
