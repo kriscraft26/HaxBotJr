@@ -17,16 +17,15 @@ from cog.datamanager import DataManager
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
-        "group.guild": ["Commander", "Cosmonaut", "Rocketeer", "Space Pilot", 
+        "group.guild": ["Cosmonaut", "Rocketeer", "Space Pilot", 
                         "Engineer", "Cadet"],
-        "group.staff": ["Commander", "Cosmonaut"],
-        "group.trusted": ["Commander", "Cosmonaut", "Rocketeer"],
+        "group.staff": ["Cosmonaut"],
+        "group.trusted": ["Cosmonaut", "Rocketeer"],
         "user.dev": {"Pucaet#9528"},
         "visualRole": {
-            "Top Gunner": {"Space Pilot", "Rocketeer"}
-        },
-        "roleAlias": {
-            "Commander": {"Commandress"}
+            "Top Gunner": {"Space Pilot", "Rocketeer"},
+            "Commander": {"Cosmonaut"},
+            "Commandress": {"Cosmonaut"}
         },
         "channel.xpLog": None
     }
@@ -95,10 +94,6 @@ class Configuration(commands.Cog):
 
         if roleRank == nameRank:
             return (roleRank, None)
-        
-        if roleRank in self._config["roleAlias"] and \
-           nameRank in self._config["roleAlias"][roleRank]:
-            return (roleRank, nameRank)
         
         if nameRank in self._config["visualRole"]:
             if roleRank in self._config["visualRole"][nameRank]:
