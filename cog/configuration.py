@@ -63,8 +63,13 @@ class Configuration(commands.Cog):
             self._channels[name] = self.guild.get_channel(val) if val else None
 
     def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
-        return self.is_of_group("guild", member) and \
-            member.nick.split(" ")[-1] in igns
+        ofGroup = self.is_of_group("guild", member)
+        inGuild = member.nick.split(" ")[-1] in igns
+        if ofGroup and not inGuild:
+            print(f"{member}: non-guild member with guild role")
+        elif not ofGroup and inGuild:
+            print(f"{member}: guild member with out guild role")
+        return ofGroup
     
     def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
@@ -78,7 +83,7 @@ class Configuration(commands.Cog):
         if not nick or " " not in nick:
             return None
 
-        roleRank = member.top_role
+        roleRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
         if not roleRank:
             return None
         roleRank = roleRank.name
@@ -86,26 +91,20 @@ class Configuration(commands.Cog):
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
 
-        if roleRank != nameRank:
-            if roleRank in self._config["roleAlias"] and \
-               nameRank in self._config["roleAlias"][roleRank]:
-                return (roleRank, None)
-            print(f"{nick}: role-name mismatch")
-            return None
-
-        if roleRank in self._config["group.guild"]:
+        if roleRank == nameRank:
             return (roleRank, None)
-        elif roleRank in self._config["visualRole"]:
-            guildRank = find(lambda r: r.name in self._config["group.guild"], member.roles)
-            if not guildRank:
-                print(f"{nick}: non guild member with visual role")
-                return None
-            guildRank = guildRank.name
-            if guildRank not in self._config["visualRole"][roleRank]:
-                print(f"{nick}: visual rank mismatch")
-                return None
-            return (guildRank, roleRank)
-
+        
+        if roleRank in self._config["roleAlias"] and \
+           nameRank in self._config["roleAlias"][roleRank]:
+            return (roleRank, nameRank)
+        
+        if nameRank in self._config["visualRole"]:
+            if roleRank in self._config["visualRole"][nameRank]:
+                return (roleRank, nameRank)
+            print(f"{nick}: visual role mismatch")
+            return None
+        
+        print(f"{nick}: rank role mismatch")
         return None
     
     def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
