@@ -15,13 +15,14 @@ from cog.datamanager import DataManager
 
 class GuildMember:
 
-    def __init__(self, dMember: Member, rank: str):
+    def __init__(self, dMember: Member, rank: str, vRank: str):
         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
         self.id: int = dMember.id
         self.discord = f"{dMember.name}#{dMember.discriminator}"
 
         seg = dMember.nick.split(" ")
         self.rank = rank
+        self.vRank = None
         self.ign: str = seg[-1]
 
         self.xp = AccumulatedStatistic("xp", self.id)
@@ -30,7 +31,7 @@ class GuildMember:
     
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "xp", "warCount", "emerald"]
+        properties = ["ign", "discord", "rank", "vRank", "xp", "warCount", "emerald"]
         for p in properties:
             if hasattr(self, p):
                 s += f" {p}={getattr(self, p)}"
@@ -64,33 +65,16 @@ class MemberManager(commands.Cog):
         allMembers = list(self.members.values()) + list(self.removedMembers.values())
         if allMembers:
             sampleMember = allMembers[0]
-            if hasattr(sampleMember, "totalXp"):
+            if not hasattr(sampleMember, "vRank"):
                 Logger.bot.debug("detected outdated GuildMember objects, updating...")
                 for member in allMembers:
-                    prevTotal = member.totalXp
-                    prevAcc = member.accXp
-                    member.xp = AccumulatedStatistic("xp", member.id)
-                    member.xp.total.val = prevTotal
-                    member.xp.acc.val = prevAcc
-                    del member.totalXp
-                    del  member.accXp
-
-                    prev = member.warCount
-                    member.warCount = Statistic("warCount", member.id, initVal=0)
-                    member.warCount.val = prev
-
-                    prev = member.emerald
-                    member.emerald = AccumulatedStatistic("emerald", member.id)
-                    member.emerald.total.val = prev if prev else -1
-
-                    if member.id in self.removedMembers:
-                        LeaderBoard.get_lb("xpAcc").remove_stat(member.xp.acc)
-                        LeaderBoard.get_lb("xpTotal").remove_stat(member.xp.total)
-                        LeaderBoard.get_lb("warCount").remove_stat(member.warCount)
-                        LeaderBoard.get_lb("emeraldAcc").remove_stat(member.emerald.acc)
-                        LeaderBoard.get_lb("emeraldTotal").remove_stat(member.emerald.total)
-
-                    Logger.bot.debug(f"-> {member}")
+                    rank = self._config.get_rank(
+                        self._config.guild.get_member(member.id))
+                    if rank:
+                        vRank = rank[1]
+                        member.vRank = vRank
+                        if vRank:
+                            Logger.bot.debug(f"-> {member}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
@@ -137,12 +121,15 @@ class MemberManager(commands.Cog):
             self._update_guild_info(self.members[before.id], after)
     
     def _update_guild_info(self, gMember: GuildMember, dMember: Member):
-        currRank = self._config.get_rank(dMember)[0]
+        currRank, vRank = self._config.get_rank(dMember)
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
             gMember.rank = currRank
             Logger.war.info(f"{gMember.ign} war count reset from {gMember.warCount}")
             gMember.warCount.val = 0
+        if gMember.vRank != vRank:
+            Logger.guild.info(f"{gMember.ign} vRank change {gMember.vRank} -> {vRank}")
+            gMember.vRank = vRank
         
         currIgn = dMember.nick.split(" ")[-1]
         if gMember.ign != currIgn:
@@ -187,7 +174,7 @@ class MemberManager(commands.Cog):
             LeaderBoard.get_lb("emeraldAcc").add_stat(gMember.emerald.acc)
             LeaderBoard.get_lb("emeraldTotal").add_stat(gMember.emerald.total)
         else:
-            gMember = GuildMember(dMember, self._config.get_rank(dMember)[0])
+            gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
         
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
@@ -252,7 +239,8 @@ class MemberManager(commands.Cog):
         text += separator
         text += f"discord {m.discord}"
 
-        title = f"[{m.rank}] {m.ign}"
+        vRank = f"[{m.vRank}] " if m.vRank else ""
+        title = f"[{m.rank}] {vRank}{m.ign}"
 
         text = decorate_text(text, title=title)
         await ctx.send(text)
