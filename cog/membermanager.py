@@ -68,13 +68,14 @@ class MemberManager(commands.Cog):
             if not hasattr(sampleMember, "vRank"):
                 Logger.bot.debug("detected outdated GuildMember objects, updating...")
                 for member in allMembers:
-                    rank = self._config.get_rank(
-                        self._config.guild.get_member(member.id))
-                    if rank:
-                        vRank = rank[1]
-                        member.vRank = vRank
-                        if vRank:
-                            Logger.bot.debug(f"-> {member}")
+                    dMember = self._config.guild.get_member(member.id)
+                    if dMember:
+                        rank = self._config.get_rank(dMember)
+                        if rank:
+                            vRank = rank[1]
+                            member.vRank = vRank
+                            if vRank:
+                                Logger.bot.debug(f"-> {member}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
