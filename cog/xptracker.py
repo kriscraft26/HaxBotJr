@@ -3,8 +3,7 @@ from discord.ext import tasks, commands
 from logger import Logger
 from msgmaker import *
 from leaderboard import LeaderBoard
-from pagedmessage import PagedMessage
-from confirmmessage import ConfirmMessage
+from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager, GuildMember

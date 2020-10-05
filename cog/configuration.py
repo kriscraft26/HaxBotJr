@@ -7,8 +7,7 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import make_entry_pages, make_alert
-from pagedmessage import PagedMessage
-from confirmmessage import ConfirmMessage
+from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from cog.datamanager import DataManager
 

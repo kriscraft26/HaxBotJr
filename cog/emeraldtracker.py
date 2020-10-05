@@ -4,9 +4,7 @@ from discord.ext import commands
 from logger import Logger
 from msgmaker import *
 from leaderboard import LeaderBoard
-from reactablemessage import ReactableMessage
-from pagedmessage import PagedMessage
-from confirmmessage import ConfirmMessage
+from reactablemessage import ReactableMessage, PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from cog.datamanager import DataManager

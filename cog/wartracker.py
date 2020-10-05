@@ -5,7 +5,7 @@ from discord.ext import commands, tasks
 from logger import Logger
 from msgmaker import *
 from leaderboard import LeaderBoard
-from pagedmessage import PagedMessage
+from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
