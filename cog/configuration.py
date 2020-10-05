@@ -76,6 +76,9 @@ class Configuration(commands.Cog):
         return str(member) in self._config[f"user.{userName}"]
 
     def get_rank(self, member: Member) -> Union[None, Tuple[str, str]]:
+        if self.is_of_user("ignore", member):
+            return None
+
         nick = member.nick
         if not nick or " " not in nick:
             return None
