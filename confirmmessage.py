@@ -14,12 +14,11 @@ class ConfirmMessage(ReactableMessage):
         self.text = text
         self.successText = successText
         self.cb = cb
-        
-        self.add_callback("✅", self._on_confirm)
-        self.add_callback("❌", self.delete_message)
 
     async def _init_send(self):
         alert = make_alert(self.text, color=COLOR_INFO)
+        await self.add_callback("✅", self._on_confirm)
+        await self.add_callback("❌", self.delete_message)
         return await self.channel.send(embed=alert)
     
     async def _on_confirm(self):

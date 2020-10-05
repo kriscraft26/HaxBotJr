@@ -13,8 +13,16 @@ class ReactableMessage:
         self.channel = channel
         self.track = track
     
-    def add_callback(self, reaction, cb, provideSelf=False):
+    async def add_callback(self, reaction, cb, provideSelf=False):
+        override = reaction in self._reactions
         self._reactions[reaction] = (cb, provideSelf)
+        if self.msg and not override:
+            await self.msg.add_reaction(reaction)
+    
+    async def remove_callback(self, reaction):
+        self._reactions.pop(reaction)
+        if self.msg:
+            await self.msg.remove_reaction(reaction, self.msg.author)
     
     async def _init_send(self) -> Message:
         raise NotImplementedError()

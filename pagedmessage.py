@@ -8,11 +8,12 @@ class PagedMessage(ReactableMessage):
         self.pages = pages
         self.index = 0
 
-        if len(pages) - 1:
-            self.add_callback("⬅", self.prev_page)
-            self.add_callback("➡", self.next_page)
+        
     
     async def _init_send(self):
+        if len(self.pages) - 1:
+            await self.add_callback("⬅", self.prev_page)
+            await self.add_callback("➡", self.next_page)
         return await self.channel.send(self.pages[0])
 
     async def next_page(self):

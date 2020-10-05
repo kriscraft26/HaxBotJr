@@ -90,7 +90,7 @@ class EmeraldTracker(commands.Cog):
 
         msg = ReactableMessage(ctx.channel)
         msg._init_send = lambda: ctx.send(embed=alert)
-        msg.add_callback("❌", self.parse_cancel_cb, provideSelf=True)
+        await msg.add_callback("❌", self.parse_cancel_cb, provideSelf=True)
 
         self.provider = ctx.author
         self.parseAlert = msg
