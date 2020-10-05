@@ -1,7 +1,8 @@
 import os
 import gzip
+import zipfile
 from pprint import pformat
-from io import StringIO
+from io import StringIO, BytesIO
 
 from discord import File, Message
 from discord.ext import commands
@@ -62,6 +63,19 @@ class RemoteDebugger(commands.Cog):
         
         f = StringIO(pformat(data))
         await ctx.send(file=File(f, filename=f"{dataName}.data.txt"))
+    
+    @parser("debug rawdata", parent=debug_root)
+    async def get_raw_data(self, ctx: commands.Context):
+        f = BytesIO()
+        zFile = zipfile.ZipFile(f, "w", zipfile.ZIP_DEFLATED)
+
+        for fileName in os.listdir("./data/"):
+            if fileName.endswith(".data"):
+                zFile.write("./data/" + fileName, fileName)
+        
+        zFile.close()
+        f.seek(0)
+        await ctx.send(file=File(f, filename=f"raw_data.zip"))
         
     def search_archives(self):
         debugChecker = lambda f: f.startswith("debug") and f.endswith(".log.gz")
