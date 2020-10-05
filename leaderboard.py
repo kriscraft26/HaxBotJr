@@ -143,7 +143,7 @@ class LeaderBoard:
     
     def get_rank(self, id_: int) -> int:
         if id_ not in self._lb:
-            return 0
+            return -1
         return self._lb.index(id_)
     
     def get_max(self) -> int:
