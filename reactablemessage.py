@@ -1,9 +1,10 @@
 from inspect import iscoroutinefunction
+from typing import List
 
 from discord import Message, TextChannel, Reaction
 from discord.ext.commands import Context
 
-from msgmaker import make_alert, COLOR_INFO, COLOR_SUCCESS
+from msgmaker import *
 
 
 class ReactableMessage:
@@ -68,16 +69,17 @@ class ReactableMessage:
                     return
                 if reaction.emoji in msg._reactions:
                     (cb, provideSelf) = msg._reactions[reaction.emoji]
-                    if provideSelf:
-                        await cb(msg)
+                    if iscoroutinefunction(cb):
+                        await cb(msg) if provideSelf else await cb()
                     else:
-                        await cb()
+                        cb(msg) if provideSelf else cb()
+                    return
 
 
 class PagedMessage(ReactableMessage):
 
-    def __init__(self, pages, channel):
-        super().__init__(channel, track=len(pages) - 1)
+    def __init__(self, pages, channel, userId=None, forceTrack=False):
+        super().__init__(channel, track=len(pages) > 1 or forceTrack, userId=userId)
         self.pages = pages
         self.index = 0
     
@@ -109,6 +111,7 @@ class ConfirmMessage(ReactableMessage):
         self.text = text
         self.successText = successText
         self.cb = cb
+        self.isCoroutine = iscoroutinefunction(cb)
 
     async def _init_send(self):
         alert = make_alert(self.text, color=COLOR_INFO)
@@ -117,10 +120,64 @@ class ConfirmMessage(ReactableMessage):
         return await self.channel.send(embed=alert)
     
     async def _on_confirm(self):
-        if iscoroutinefunction(self.cb):
+        if self.isCoroutine:
             await self.cb(self)
         else:
             self.cb(self)
         alert = make_alert(self.successText, color=COLOR_SUCCESS)
         await self.edit_message(embed=alert)
         await self.un_track()
+
+
+class ListSelectionMessage(PagedMessage):
+
+    numEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+
+    def __init__(self, ctx: Context, entries: List[str], cb):
+        entryPages = slice_entries(entries, maxEntries=5)
+        pages = list(map(self._make_page, entryPages))
+        super().__init__(pages, ctx.channel, userId=ctx.author.id, forceTrack=True)
+        self.entryPages = entryPages
+        self.cb = cb
+        self.isCoroutine = iscoroutinefunction(cb)
+    
+    async def _init_send(self):
+        msg = await super()._init_send()
+        currPageLen = len(self.entryPages[self.index])
+        for i in range(currPageLen):
+            emoji = ListSelectionMessage.numEmojis[i]
+            await self.add_callback(emoji, self._wrap_cb(i))
+        return msg
+    
+    def _wrap_cb(self, i):
+        if self.isCoroutine:
+            async def wrapped_cb():
+                await self.cb(self, self.entryPages[self.index][i])
+        else:
+            def wrapped_cb():
+                self.cb(self, self.entryPages[self.index][i])
+        return wrapped_cb
+
+    def _make_page(self, entries: List[str]):
+        page = "\n".join([f"[{i + 1}] {e}" for i, e in enumerate(entries)])
+        return decorate_text(page)
+    
+    async def next_page(self):
+        await self._update_reactions(super().next_page)
+    
+    async def prev_page(self):
+        await self._update_reactions(super().prev_page)
+    
+    async def _update_reactions(self, updater):
+        prevPageLen = len(self.entryPages[self.index])
+        await updater()
+        currPageLen = len(self.entryPages[self.index])
+
+        if currPageLen > prevPageLen:
+            for i in range(prevPageLen, currPageLen):
+                emoji = ListSelectionMessage.numEmojis[i]
+                await self.add_callback(emoji, self._wrap_cb(i))
+        else:
+            for i in range(currPageLen, prevPageLen):
+                emoji = ListSelectionMessage.numEmojis[i]
+                await self.remove_callback(emoji)
