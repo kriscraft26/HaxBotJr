@@ -91,7 +91,7 @@ class LeaderBoard:
             self.set_stat(id_, 0)
     
     def get_stat(self, id_: int):
-        return self._stats.get(id_, -1)
+        return self._stats.get(id_, 0)
     
     def remove_stat(self, id_: int):
         self._stats.pop(id_, -1)
@@ -143,7 +143,7 @@ class LeaderBoard:
     
     def get_rank(self, id_: int) -> int:
         if id_ not in self._lb:
-            return -1
+            return 0
         return self._lb.index(id_)
     
     def get_max(self) -> int:
