@@ -64,20 +64,6 @@ class Configuration(commands.Cog):
         self._config[name] = val
         if name in self._channels:
             self._channels[name] = self.guild.get_channel(val) if val else None
-
-    def is_guild_member(self, member: Member, igns: Set[str]) -> bool:
-        if self.is_of_user("ignore", member):
-            return False
-
-        ofGroup = self.is_of_group("guild", member)
-
-        if self.is_of_group("guild", member):
-            inGuild = member.nick.split(" ")[-1] in igns
-            if not inGuild:
-                print(f"{member.nick}: non-guild member with guild role")
-                return False
-            return True
-        return False
     
     def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
