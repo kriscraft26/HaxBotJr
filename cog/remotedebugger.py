@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from logger import DEBUG_FILE, ARCHIVE_FOLDER
 from msgmaker import *
+from reactablemessage import ListSelectionMessage, ReactableMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil
 from cog.configuration import Configuration
@@ -33,23 +34,11 @@ class RemoteDebugger(commands.Cog):
     async def list_archives(self, ctx: commands.Context):
         if not self.archives:
             self.search_archives()
-        text = "\n".join([f"[{i}] {f}" for i, f in enumerate(self.archives)])
-        await ctx.send(decorate_text(text))
+        await ListSelectionMessage(ctx, self.archives, self.send_archive_cb).init()
     
-    @parser("debug archive", "index", parent=debug_root)
-    async def get_archive(self, ctx: commands.Context, index):
-        if not self.archives:
-            self.search_archives()
-
-        if not index.isnumeric() or int(index) >= len(self.archives):
-            alert = make_alert("Invalid archive index", 
-                subtext="use `]debug archives` to get archive indices.")
-            await ctx.send(embed=alert)
-            return
-        
-        archiveFile = self.archives[int(index)]
-        with gzip.open(os.path.join(ARCHIVE_FOLDER, archiveFile), "r") as f:
-            await ctx.send(file=File(f, filename=archiveFile[:-3]))
+    async def send_archive_cb(self, msg: ReactableMessage, fileName):
+        with gzip.open(os.path.join(ARCHIVE_FOLDER, fileName), "r") as f:
+            await msg.msg.channel.send(file=File(f, filename=fileName[:-3]))
 
     @parser("debug data", "dataName", parent=debug_root)
     async def get_data(self, ctx: commands.Context, dataName):
