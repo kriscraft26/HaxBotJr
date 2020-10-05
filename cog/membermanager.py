@@ -1,6 +1,6 @@
 from typing import Dict, List, Callable, Set
 
-from discord import Member, Embed
+from discord import Member, Embed, User
 from discord.ext import tasks, commands
 
 from logger import Logger
@@ -18,7 +18,7 @@ class GuildMember:
     def __init__(self, dMember: Member, rank: str, vRank: str):
         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
         self.id: int = dMember.id
-        self.discord = f"{dMember.name}#{dMember.discriminator}"
+        self.discord = str(dMember)
 
         seg = dMember.nick.split(" ")
         self.rank = rank
@@ -124,7 +124,7 @@ class MemberManager(commands.Cog):
     
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
-        isGMemberBefore = self._config.is_of_group("guild", before)
+        isGMemberBefore = before.id in self.members
         isGMemberAfter = self._config.is_of_group("guild", after)
 
         if isGMemberBefore and not isGMemberAfter:
@@ -133,6 +133,18 @@ class MemberManager(commands.Cog):
             self._update_guild_info(self._add_member(after), after)
         elif isGMemberBefore and isGMemberAfter:
             self._update_guild_info(self.members[before.id], after)
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, dMember: Member):
+        if dMember.id in self.members:
+            self._remove_member(self.members[dMember.id])
+
+    @commands.Cog.listener()
+    async def on_user_update(self, before: User, after: User):
+        if before.id in self.members:
+            member = self.members[before.id]
+            Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
+            member.discord = str(after)
     
     def _update_guild_info(self, gMember: GuildMember, dMember: Member):
         currRank, vRank = self._config.get_rank(dMember)
