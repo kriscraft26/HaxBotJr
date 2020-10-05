@@ -257,7 +257,7 @@ class MemberManager(commands.Cog):
         text += f"Accumulated Em   {statDisplay}" % statInfo["emeraldAcc"]
         text += separator
         text += f"War Count:       {statDisplay}" % statInfo["warCount"]
-        text += separator
+        text += "\n"
         text += f"discord {m.discord} {idleStatus}"
 
         vRank = f"<{m.vRank}> " if m.vRank else ""
