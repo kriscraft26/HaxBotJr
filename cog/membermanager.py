@@ -207,6 +207,10 @@ class MemberManager(commands.Cog):
         id_ = dMember.id
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
+
+        if gMember.ign not in self._igMembers:
+            self.idleMembers.add(id_)
+            Logger.bot.info(f"{gMember.ign} status set to idle")
         
         return gMember
     
