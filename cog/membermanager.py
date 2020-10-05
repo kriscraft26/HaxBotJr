@@ -6,7 +6,7 @@ from discord.ext import tasks, commands
 from logger import Logger
 from msgmaker import *
 from pagedmessage import PagedMessage
-from statistic import Statistic, AccumulatedStatistic, LeaderBoard
+from leaderboard import LeaderBoard
 from util.cmdutil import parser
 from cog.wynnapi import WynnAPI
 from cog.configuration import Configuration
@@ -25,13 +25,9 @@ class GuildMember:
         self.vRank = None
         self.ign: str = seg[-1]
 
-        self.xp = AccumulatedStatistic("xp", self.id)
-        self.warCount = Statistic("warCount", self.id, initVal=0)
-        self.emerald = AccumulatedStatistic("emerald", self.id)
-    
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "vRank", "xp", "warCount", "emerald"]
+        properties = ["ign", "discord", "rank", "vRank"]
         for p in properties:
             if hasattr(self, p):
                 s += f" {p}={getattr(self, p)}"
@@ -40,7 +36,8 @@ class GuildMember:
 
 IG_MEMBERS_UPDATE_INTERVAL = 3
 
-@DataManager.register("members", "ignIdMap", "removedMembers")
+@DataManager.register("members", "ignIdMap", "idleMembers", 
+                      mapper={"removedMembers": "idleMembers"})
 class MemberManager(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -49,7 +46,7 @@ class MemberManager(commands.Cog):
         self.members: Dict[int, GuildMember] = {}
         self.ignIdMap: Dict[str, int] = {}
 
-        self.removedMembers: Dict[int, GuildMember] = {}
+        self.idleMembers: Set[int] = set()
 
         self.hasInitMembersUpdate = False
 
@@ -62,20 +59,37 @@ class MemberManager(commands.Cog):
     def __loaded__(self):
         self._ig_members_update.start()
 
-        allMembers = list(self.members.values()) + list(self.removedMembers.values())
+        allMembers = list(self.members.values())
         if allMembers:
             sampleMember = allMembers[0]
-            if not hasattr(sampleMember, "vRank"):
+            if hasattr(sampleMember, "xp"):
                 Logger.bot.debug("detected outdated GuildMember objects, updating...")
                 for member in allMembers:
-                    dMember = self._config.guild.get_member(member.id)
-                    if dMember:
-                        rank = self._config.get_rank(dMember)
-                        if rank:
-                            vRank = rank[1]
-                            member.vRank = vRank
-                            if vRank:
-                                Logger.bot.debug(f"-> {member}")
+                    del member.xp
+                    del member.emerald
+                    del member.warCount
+                    Logger.bot.debug(f"-> {member}")
+        
+        if type(self.idleMembers) == dict:
+            Logger.bot.debug("detected outdated idleMembers, updating...")
+            updated = set()
+            for id_, member in self.idleMembers.items():
+                dMember = self._config.guild.get_member(id_)
+                if dMember and self._config.is_of_group("guild", dMember):
+                    updated.add(id_)
+                    self.members[id_] = member
+                    self.ignIdMap[member.ign] = id_
+                    LeaderBoard.get_lb("xpTotal").set_stat(id_, member.xp.total.val)
+                    LeaderBoard.get_lb("xpAcc").set_stat(id_, member.xp.acc.val)
+                    LeaderBoard.get_lb("warCount").set_stat(id_, member.warCount.val)
+                    LeaderBoard.get_lb("emeraldTotal").set_stat(id_, member.emerald.total.val)
+                    LeaderBoard.get_lb("emeraldAcc").set_stat(id_, member.emerald.acc.val)
+                    del member.xp
+                    del member.emerald
+                    del member.warCount
+                    Logger.bot.debug(f"-> {member}")
+            self.idleMembers = updated
+            Logger.bot.debug(f"-> {self.idleMembers}")
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
@@ -90,20 +104,19 @@ class MemberManager(commands.Cog):
             self._bulk_update_members()
             self.hasInitMembersUpdate = True
         else:
+            trackedIgns = self.get_igns_set()
 
-            joined = self._igMembers.difference(prevIgMembers)
+            joined = self._igMembers.difference(prevIgMembers).intersection(trackedIgns)
+            joinedIds = {self.ignIdMap[ign] for ign in joined}
+            self.idleMembers = self.idleMembers.difference(joinedIds)
             if joined:
-                guildDMembers = self._config.get_all_guild_members(self._igMembers)
-                guildDMembers = {m.nick.split(" ")[-1]: m for m in guildDMembers}
-
-                validIgns = joined.intersection(set(guildDMembers.keys()))
-                for ign in validIgns:
-                    self._add_member(guildDMembers[ign])
-                
-            removed = prevIgMembers.difference(self._igMembers)
-            for ign in removed:
-                if ign in self.ignIdMap:
-                    self._remove_member(self.get_member_by_ign(ign))
+                Logger.bot.info(f"{joined} status set to active")
+            
+            removed = prevIgMembers.difference(self._igMembers).intersection(trackedIgns)
+            removedIds = {self.ignIdMap[ign] for ign in removed}
+            self.idleMembers = self.idleMembers.union(removedIds)
+            if removed:
+                Logger.bot.info(f"{removed} status set to idle")
     
     @_ig_members_update.before_loop
     async def _before_ig_members_update(self):
@@ -111,8 +124,8 @@ class MemberManager(commands.Cog):
     
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
-        isGMemberBefore = self._config.is_guild_member(before, self._igMembers)
-        isGMemberAfter = self._config.is_guild_member(after, self._igMembers)
+        isGMemberBefore = self._config.is_of_group("guild", before)
+        isGMemberAfter = self._config.is_of_group("guild", after)
 
         if isGMemberBefore and not isGMemberAfter:
             self._remove_member(self.members[after.id])
@@ -142,41 +155,44 @@ class MemberManager(commands.Cog):
         gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
     def _bulk_update_members(self):
-        currGuildDMembers = self._config.get_all_guild_members(self._igMembers)
+        currGuildDMembers = self._config.get_all_guild_members()
         currGuildDMembers = {m.id: m for m in currGuildDMembers}
 
         currGuildMemberIds = set(currGuildDMembers.keys())
         prevGuildMemberIds = set(self.members.keys())
 
         joined = currGuildMemberIds.difference(prevGuildMemberIds)
-        for joinedMemberId in joined:
-            self._add_member(currGuildDMembers[joinedMemberId])
+        for id_ in joined:
+            dMember = currGuildDMembers[id_]
+            self._add_member(dMember)
+
+            ign = dMember.nick.split(" ")[-1]
+            if ign not in self._igMembers:
+                self.idleMembers.add(id_)
+                Logger.bot.info(f"{ign} status set to idle")
         
         removed = prevGuildMemberIds.difference(currGuildMemberIds)
-        for removedMemberId in removed:
-            self._remove_member(self.members[removedMemberId])
+        for id_ in removed:
+            self._remove_member(self.members[id_])
         
         changed = prevGuildMemberIds.intersection(currGuildMemberIds)
-        for changedMemberId in changed:
-            gMember = self.members[changedMemberId]
-            dMember = currGuildDMembers[changedMemberId]
+        for id_ in changed:
+            gMember = self.members[id_]
+            dMember = currGuildDMembers[id_]
             self._update_guild_info(gMember, dMember)
+
+            ign = dMember.nick.split(" ")[-1]
+            if ign in self._igMembers and id_ in self.idleMembers:
+                self.idleMembers.remove(id_)
+                Logger.bot.info(f"{ign} status set to active")
+            elif ign not in self._igMembers and id_ not in self.idleMembers:
+                self.idleMembers.add(id_)
+                Logger.bot.info(f"{ign} status set to idle")
     
     def _add_member(self, dMember: Member):
-        id_ = dMember.id
-        if id_ in self.removedMembers:
-            gMember = self.removedMembers[id_]
-            Logger.bot.info(f"Undo removal of guild member {gMember}")
-            del self.removedMembers[id_]
-
-            LeaderBoard.get_lb("xpAcc").add_stat(gMember.xp.acc)
-            LeaderBoard.get_lb("xpTotal").add_stat(gMember.xp.total)
-            LeaderBoard.get_lb("warCount").add_stat(gMember.warCount)
-            LeaderBoard.get_lb("emeraldAcc").add_stat(gMember.emerald.acc)
-            LeaderBoard.get_lb("emeraldTotal").add_stat(gMember.emerald.total)
-        else:
-            gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
+        gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
         
+        id_ = dMember.id
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
         
@@ -188,21 +204,16 @@ class MemberManager(commands.Cog):
 
         del self.members[id_]
         del self.ignIdMap[gMember.ign]
+        id_ in self.idleMembers and self.idleMembers.remove(id_)
 
-        LeaderBoard.get_lb("xpAcc").remove_stat(gMember.xp.acc)
-        LeaderBoard.get_lb("xpTotal").remove_stat(gMember.xp.total)
-        LeaderBoard.get_lb("warCount").remove_stat(gMember.warCount)
-        LeaderBoard.get_lb("emeraldAcc").remove_stat(gMember.emerald.acc)
-        LeaderBoard.get_lb("emeraldTotal").remove_stat(gMember.emerald.total)
-
-        self.removedMembers[id_] = gMember
-    
-    def clear_removed_members(self):
-        Logger.bot.info(f"clearing removed members: {self.removedMembers}")
-        self.removedMembers.clear()
+        LeaderBoard.remove_stats(id_)
     
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
+    
+    def get_tracked_igns(self) -> Set[str]:
+        idle_igns = {self.members[id_].ign for id_ in self.idleMembers}
+        return self.get_igns_set().difference(idle_igns)
     
     def get_member_by_ign(self, ign: str) -> GuildMember:
         return self.members[self.ignIdMap[ign]]
@@ -215,48 +226,40 @@ class MemberManager(commands.Cog):
         
         m = self.get_member_by_ign(ign)
 
-        maxStatLen = len(str(max([m.xp.acc.val, m.xp.total.val, m.warCount.val, 
-                                  m.emerald.total.val, m.emerald.acc.val])))
+        stats = LeaderBoard.get_stats(m.id)
+        ranks = LeaderBoard.get_ranks(m.id)
+        statInfo = {name: (stat, ranks[name]) for name, stat in stats.items()}
 
-        accXpRank = LeaderBoard.get_lb("xpAcc").get_rank(m.id) + 1
-        totalXpRank = LeaderBoard.get_lb("xpTotal").get_rank(m.id) + 1
-        warCountRank = LeaderBoard.get_lb("warCount").get_rank(m.id) + 1
-        accEmRank = LeaderBoard.get_lb("emeraldAcc").get_rank(m.id) + 1
-        totalEmRank = LeaderBoard.get_lb("emeraldTotal").get_rank(m.id) + 1
-
-        maxRankLen = len(str(max([accXpRank, totalXpRank, warCountRank, 
-                                  accEmRank, totalEmRank])))
+        maxStatLen = max(map(lambda n: len(str(n)), stats.values()))
+        maxRankLen = max(map(lambda n: len(str(n)), ranks.values()))
 
         separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
+        statDisplay = f"%{maxStatLen}d (#%d)\n"
+        idleStatus = "-- NOT IN GUILD" if m.id in self.idleMembers else ""
 
         text = ""
-        text += f"Total XP:        %{maxStatLen}d (#{totalXpRank})\n" % m.xp.total.val
-        text += f"Accumulated XP:  %{maxStatLen}d (#{accXpRank})\n" % m.xp.acc.val
+        text += f"Total XP:        {statDisplay}" % statInfo["xpTotal"]
+        text += f"Accumulated XP:  {statDisplay}" % statInfo["xpAcc"]
         text += separator
-        text += f"Total Em:        %{maxStatLen}d (#{totalEmRank})\n" % m.emerald.total.val
-        text += f"Accumulated Em   %{maxStatLen}d (#{accEmRank})\n" % m.emerald.acc.val
+        text += f"Total Em:        {statDisplay}" % statInfo["emeraldTotal"]
+        text += f"Accumulated Em   {statDisplay}" % statInfo["emeraldAcc"]
         text += separator
-        text += f"War Count:       %{maxStatLen}d (#{warCountRank})\n" % m.warCount.val
+        text += f"War Count:       {statDisplay}" % statInfo["warCount"]
         text += separator
-        text += f"discord {m.discord}"
+        text += f"discord {m.discord} {idleStatus}"
 
-        vRank = f"[{m.vRank}] " if m.vRank else ""
+        vRank = f"<{m.vRank}> " if m.vRank else ""
         title = f"[{m.rank}] {vRank}{m.ign}"
 
         text = decorate_text(text, title=title)
         await ctx.send(text)
     
-    @parser("members", ["removed"], isGroup=True)
-    async def display_members(self, ctx: commands.Context, removed):
-        if removed:
-            lb = self.removedMembers.keys()
-            igns = list(map(lambda m: m.ign, self.removedMembers.values()))
-            members = self.removedMembers
-        else:
-            lb = self.members.keys()
-            igns = self.ignIdMap.keys()
-            members = self.members
-        title = ("Removed " if removed else "") + "Guild Members"
+    @parser("members", ["idle"], isGroup=True)
+    async def display_members(self, ctx: commands.Context, idle):
+        lb = self.idleMembers if idle else self.members.keys()
+        igns = self.ignIdMap.keys()
+        members = self.members
+        title = ("Idle " if idle else "") + "Guild Members"
         statSelector = lambda m: m.discord
         
         pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
@@ -265,7 +268,7 @@ class MemberManager(commands.Cog):
     
     @parser("members missing", parent=display_members)
     async def display_missing_members(self, ctx: commands.Context):
-        trackedIgns = set(self.ignIdMap.keys())
+        trackedIgns = self.get_igns_set()
         missingIgns = self._igMembers.difference(trackedIgns)
         await ctx.send(", ".join(missingIgns))
 

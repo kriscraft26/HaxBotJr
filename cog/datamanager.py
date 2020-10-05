@@ -10,14 +10,17 @@ class DataManager(commands.Cog):
 
     _classes = {}
     _idFuncs = {}
+    _mappers = {}
 
     @classmethod
-    def register(cls, *attributes, idFunc=None):
+    def register(cls, *attributes, idFunc=None, mapper=None):
         def decorator(targetCls):
             Logger.bot.debug(f"registered {targetCls} with attributes {attributes}")
             cls._classes[targetCls] = [attributes, set()]
             if idFunc:
                 cls._idFuncs[targetCls] = idFunc
+            if mapper:
+                cls._mappers[targetCls] = mapper
             return targetCls
         return decorator
     
@@ -46,6 +49,8 @@ class DataManager(commands.Cog):
             for attr, val in attrMap.items():
                 if hasattr(obj, attr):
                     setattr(obj, attr, val)
+                elif attr in cls._mappers.get(targetCls, {}):
+                    setattr(obj, cls._mappers[targetCls][attr], val)
                 else:
                     Logger.bot.debug(f"failed to load {attr}")
         else:

@@ -53,7 +53,6 @@ class DateClock(commands.Cog):
 
         self._xpTracker.reset_xp()
         self._warTracker.reset_war_count()
-        self._memberManager.clear_removed_members()
 
     def _update_loop_interval(self):
         now = timeutil.now()

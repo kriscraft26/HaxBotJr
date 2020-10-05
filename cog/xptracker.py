@@ -2,7 +2,7 @@ from discord.ext import tasks, commands
 
 from logger import Logger
 from msgmaker import *
-from statistic import LeaderBoard
+from leaderboard import LeaderBoard
 from pagedmessage import PagedMessage
 from confirmmessage import ConfirmMessage
 from util.cmdutil import parser
@@ -30,10 +30,11 @@ class XPTracker(commands.Cog):
         if not guildStats:
             return
 
+        trackedIgns = self._memberManager.get_tracked_igns()
         for memberData in guildStats["members"]:
-            if memberData["name"] in self._memberManager.ignIdMap:
-                gMember = self._memberManager.get_member_by_ign(memberData["name"])
-                gMember.xp.accumulate(memberData["contributed"])
+            if memberData["name"] in trackedIgns:
+                id_ = self._memberManager.ignIdMap[ memberData["name"]]
+                LeaderBoard.accumulate(id_, "xp", memberData["contributed"])
     
     @_update.before_loop
     async def _before_update(self):
@@ -41,8 +42,7 @@ class XPTracker(commands.Cog):
         
     def reset_xp(self):
         Logger.bot.info("resetting all accumulated xp.")
-        for member in self._memberManager.members.values():
-            member.xp.reset()
+        LeaderBoard.get_lb("xpAcc").reset_stats()
     
     @parser("xp", ["total"], isGroup=True)
     async def display_xp_lb(self, ctx: commands.Context, total):

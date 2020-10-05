@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import *
-from statistic import LeaderBoard
+from leaderboard import LeaderBoard
 from reactablemessage import ReactableMessage
 from pagedmessage import PagedMessage
 from confirmmessage import ConfirmMessage
@@ -57,14 +57,13 @@ class EmeraldTracker(commands.Cog):
             sections = line.split(" - ")
             ign = sections[0].split(" ")[-1]
             if ign in self._memberManager.ignIdMap:
-                member = self._memberManager.get_member_by_ign(ign)
+                id_ = self._memberManager.ignIdMap[ign]
                 em = int(sections[2][:-1])
-                member.emerald.accumulate(em)
+                LeaderBoard.accumulate(id_, "emerald", em)
     
     def reset_em(self):
         Logger.em.info("Resetting all emeralds")
-        for member in self._memberManager.members.values():
-            member.emerald.reset()
+        LeaderBoard.get_lb("emeraldAcc").reset_stats()
 
     @parser("em", ["total"], isGroup=True)
     async def display_emerald(self, ctx: commands.Context, total):

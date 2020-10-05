@@ -59,7 +59,7 @@ def make_entry_pages(entries, maxEntries=MAX_ENTRY_PER_PAGE, **decoArgs):
 
 
 def make_stat_entries(lb, igns, members, statSelector):
-    maxIgnLen = max(map(len, igns)) if igns else 0
+    maxIgnLen = max(map(len, igns), default=0)
     entryFmt = f"[%-{len(str(len(lb)))}d]  %-{maxIgnLen}s  |  %s"
 
     entries = []

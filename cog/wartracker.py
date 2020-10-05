@@ -4,7 +4,7 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from msgmaker import *
-from statistic import LeaderBoard
+from leaderboard import LeaderBoard
 from pagedmessage import PagedMessage
 from util.cmdutil import parser
 from cog.datamanager import DataManager
@@ -45,13 +45,14 @@ class WarTracker(commands.Cog):
                 self.currentWar = None
                 self.prevInitdWars = []
         else:
+            trackedIgns = self._memberManager.get_tracked_igns()
             for war in self.prevInitdWars:
                 if war not in serverList:
                     continue
                 players = serverList[war]
                 if not players:
                     continue
-                targetPlayers = set(players).intersection(self._memberManager.get_igns_set())
+                targetPlayers = set(players).intersection(trackedIgns)
                 if targetPlayers:
                     Logger.war.info(f"{war} started with {targetPlayers}")
                     for ign in targetPlayers:
@@ -63,9 +64,10 @@ class WarTracker(commands.Cog):
             self.prevInitdWars = filter(initWarCheck, serverList.keys())
 
     def _init_update(self, serverList: dict):
+        trackedIgns = self._memberManager.get_tracked_igns()
         for war, players in serverList.items():
             if war.startswith("WAR") and players:
-                targetPlayers = set(players).intersection(self._memberManager.get_igns_set())
+                targetPlayers = set(players).intersection(trackedIgns)
                 if targetPlayers:
                     Logger.war.info(f"{war} is currently on going with {targetPlayers}")
                     for ign in targetPlayers:
@@ -74,8 +76,10 @@ class WarTracker(commands.Cog):
                     return
     
     def _incrememt_war_count(self, ign: str):
-        member = self._memberManager.get_member_by_ign(ign)
-        member.warCount.val += 1
+        id_ = self._memberManager.ignIdMap[ign]
+        lb: LeaderBoard = LeaderBoard.get_lb("warCount")
+        prevWc = lb.get_stat(id_)
+        lb.set_stat(id_, prevWc + 1)
     
     @_update.before_loop
     async def _before_update(self):
@@ -83,8 +87,7 @@ class WarTracker(commands.Cog):
     
     def reset_war_count(self):
         Logger.bot.info("resetting all accumulated war counts")
-        for member in self._memberManager.members.values():
-            member.warCount.val = 0
+        LeaderBoard.get_lb("warCount").reset_stats()
 
     @parser("wc")
     async def display_war_count_lb(self, ctx: commands.Context):

@@ -17,7 +17,7 @@ from cog.datamanager import DataManager
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
-        "group.guild": ["Cosmonaut", "Rocketeer", "Space Pilot", 
+        "group.guild": ["MoonWalker", "Cosmonaut", "Rocketeer", "Space Pilot", 
                         "Engineer", "Cadet"],
         "group.staff": ["Cosmonaut"],
         "group.trusted": ["Cosmonaut", "Rocketeer"],
@@ -120,8 +120,10 @@ class Configuration(commands.Cog):
         print(f"{nick}: rank role mismatch")
         return None
     
-    def get_all_guild_members(self, igns: Set[str]) -> Set[Member]:
-        return set(filter(lambda m: self.is_guild_member(m, igns), self.guild.members))
+    def get_all_guild_members(self) -> Set[Member]:
+        predicate = lambda m: not self.is_of_user("ignore", m) and\
+                              self.is_of_group("guild", m)
+        return set(filter(predicate, self.guild.members))
 
     async def perm_check(self, ctx: commands.Context, fieldName):
         type_, name = fieldName.split(".")

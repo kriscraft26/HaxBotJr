@@ -6,7 +6,7 @@ from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
-from statistic import LeaderBoard
+from leaderboard import LeaderBoard
 from msgmaker import make_alert, COLOR_ERROR
 from reactablemessage import ReactableMessage
 from cog.datamanager import DataManager

@@ -7,7 +7,7 @@ class Statistic:
 
     def __init__(self, name: str, id_: int, initVal: int=-1, _fromReduce=False):
         self.name = name
-        self.lb: LeaderBoard = LeaderBoard.get_lb(name)
+        self.lb = None
         self.id = id_
         super().__setattr__("val", initVal)
         not _fromReduce and self.lb.add_stat(self)
