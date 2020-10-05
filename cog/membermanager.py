@@ -240,7 +240,7 @@ class MemberManager(commands.Cog):
 
         stats = LeaderBoard.get_stats(m.id)
         ranks = LeaderBoard.get_ranks(m.id)
-        statInfo = {name: (stat, ranks[name]) for name, stat in stats.items()}
+        statInfo = {name: (stat, ranks[name] + 1) for name, stat in stats.items()}
 
         maxStatLen = max(map(lambda n: len(str(n)), stats.values()))
         maxRankLen = max(map(lambda n: len(str(n)), ranks.values()))
