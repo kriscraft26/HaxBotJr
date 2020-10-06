@@ -161,3 +161,16 @@ class LeaderBoard:
         statSelector = lambda m: self.get_stat(m.id)
         return make_entry_pages(make_stat_entries(
             self._lb, igns, members, statSelector), **decoArgs)
+
+
+class BWLeaderBoard(LeaderBoard):
+
+    def __init__(self, name, logger):
+        super().__init__(name, logger)
+
+        self._bwSnapshot = {}
+    
+    def set_stat(self, id_: int, val: int):
+        base = self._bwSnapshot.get(id_, 0)
+        val -= base
+        super().set_stat(id_, val)

@@ -6,12 +6,15 @@ from leaderboard import LeaderBoard
 from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from cog.wynnapi import WynnAPI
-from cog.membermanager import MemberManager, GuildMember
+from cog.membermanager import MemberManager
 from cog.configuration import Configuration
+from cog.datamanager import DataManager
 
 
 XP_UPDATE_INTERVAL = 6
 
+
+@DataManager.register("_prevTXp")
 class XPTracker(commands.Cog):
     XP_RESET_THRESHOLD = 10000
 
@@ -20,6 +23,8 @@ class XPTracker(commands.Cog):
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._config: Configuration = bot.get_cog("Configuration")
+
+        self._prevTXp = {}
 
         self._update.start()
 
@@ -30,10 +35,19 @@ class XPTracker(commands.Cog):
             return
 
         trackedIgns = self._memberManager.get_tracked_igns()
+        xpTotalLb: LeaderBoard = LeaderBoard.get_lb("xpTotal")
+
         for memberData in guildStats["members"]:
             if memberData["name"] in trackedIgns:
                 id_ = self._memberManager.ignIdMap[ memberData["name"]]
-                LeaderBoard.accumulate(id_, "xp", memberData["contributed"])
+                newTXp = memberData["contributed"]
+
+                prevTXp = self._prevTXp.get(id_, -1)
+                if prevTXp == newTXp:
+                    continue
+
+                self._prevTXp[id_] = xpTotalLb.get_stat(id_)
+                LeaderBoard.accumulate(id_, "xp", newTXp)
     
     @_update.before_loop
     async def _before_update(self):
