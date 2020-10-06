@@ -138,24 +138,24 @@ class ListSelectionMessage(PagedMessage):
         pages = list(map(self._make_page, entryPages))
         super().__init__(pages, ctx.channel, userId=ctx.author.id, forceTrack=True)
         self.entryPages = entryPages
-        self.cb = cb
-        self.isCoroutine = iscoroutinefunction(cb)
+        isCoroutine = iscoroutinefunction(cb)
+        self.cbs = [self._wrap_cb(i, cb, isCoroutine) for i in range(5)]
     
     async def _init_send(self):
         msg = await super()._init_send()
         currPageLen = len(self.entryPages[self.index])
         for i in range(currPageLen):
             emoji = ListSelectionMessage.numEmojis[i]
-            await self.add_callback(emoji, self._wrap_cb(i))
+            await self.add_callback(emoji, self.cbs[i])
         return msg
     
-    def _wrap_cb(self, i):
-        if self.isCoroutine:
+    def _wrap_cb(self, i, cb, isCoroutine):
+        if isCoroutine:
             async def wrapped_cb():
-                await self.cb(self, self.entryPages[self.index][i])
+                await cb(self, self.entryPages[self.index][i])
         else:
             def wrapped_cb():
-                self.cb(self, self.entryPages[self.index][i])
+                cb(self, self.entryPages[self.index][i])
         return wrapped_cb
 
     def _make_page(self, entries: List[str]):
@@ -176,7 +176,7 @@ class ListSelectionMessage(PagedMessage):
         if currPageLen > prevPageLen:
             for i in range(prevPageLen, currPageLen):
                 emoji = ListSelectionMessage.numEmojis[i]
-                await self.add_callback(emoji, self._wrap_cb(i))
+                await self.add_callback(emoji, self.cbs[i])
         else:
             for i in range(currPageLen, prevPageLen):
                 emoji = ListSelectionMessage.numEmojis[i]
