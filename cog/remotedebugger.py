@@ -3,11 +3,12 @@ import gzip
 import zipfile
 from pprint import pformat
 from io import StringIO, BytesIO
+from typing import List
 
 from discord import File, Message
 from discord.ext import commands
 
-from logger import DEBUG_FILE, ARCHIVE_FOLDER
+from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE
 from msgmaker import *
 from reactablemessage import ListSelectionMessage, ReactableMessage
 from util.cmdutil import parser
@@ -18,23 +19,25 @@ from cog.configuration import Configuration
 class RemoteDebugger(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        self.archives = []
+        self.debugArchives = []
+        self.infoArchives = []
 
         self._config: Configuration = bot.get_cog("Configuration")
+
+        self._search_archives()
 
     @parser("debug", isGroup=True)
     async def debug_root(self, ctx: commands.Context):
         pass
 
-    @parser("debug log", parent=debug_root)
-    async def get_log(self, ctx: commands.Context):
-        await ctx.send(file=File(DEBUG_FILE))
+    @parser("debug log", ["info"], parent=debug_root)
+    async def get_log(self, ctx: commands.Context, info):
+        await ctx.send(file=File(LOG_FILE if info else DEBUG_FILE))
     
-    @parser("debug archives", parent=debug_root)
-    async def list_archives(self, ctx: commands.Context):
-        if not self.archives:
-            self.search_archives()
-        await ListSelectionMessage(ctx, self.archives, self.send_archive_cb).init()
+    @parser("debug archives", ["info"], parent=debug_root)
+    async def list_archives(self, ctx: commands.Context, info):
+        archives = self.infoArchives if info else self.debugArchives
+        await ListSelectionMessage(ctx, archives, self.send_archive_cb).init()
     
     async def send_archive_cb(self, msg: ReactableMessage, fileName):
         with gzip.open(os.path.join(ARCHIVE_FOLDER, fileName), "r") as f:
@@ -66,10 +69,20 @@ class RemoteDebugger(commands.Cog):
         f.seek(0)
         await ctx.send(file=File(f, filename=f"raw_data.zip"))
         
-    def search_archives(self):
-        debugChecker = lambda f: f.startswith("debug") and f.endswith(".log.gz")
-        self.archives = list(filter(debugChecker, os.listdir(ARCHIVE_FOLDER)))
-        self.archives.sort()
+    def _search_archives(self):
+        files = filter(lambda f: f.endswith(".log.gz"), os.listdir(ARCHIVE_FOLDER))
+        for f in files:
+            if f.startswith("debug"):
+                self.debugArchives.append(f)
+            else:
+                self.infoArchives.append(f)
+        self.debugArchives.sort(key=self._sort_archives_key)
+        self.infoArchives.sort(key=self._sort_archives_key)
+        
+    def _sort_archives_key(self, archive: str):
+        [date, version, *_] = archive.split(".")
+        [year, month, day] = list(map(int, date.split("-")[-3:]))
+        return int(version) + day * 1000 + month * 100000 + year * 10000000
     
     async def cog_check(self, ctx: commands.Context):
         return await self._config.perm_check(ctx, "user.dev")
