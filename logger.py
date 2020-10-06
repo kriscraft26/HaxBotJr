@@ -98,8 +98,9 @@ class Logger:
             [delete, *archivedDebugs] = archivedDebugs
             os.remove(ARCHIVE_FOLDER + delete)
         
-        cls._archive_file(DEBUG_FILE, ARCHIVE_FOLDER + "debug-" + archiveName)
-        archivedDebugs.append("debug-" + archiveName)
+        debugArchiveName = "debug-" + archiveName
+        cls._archive_file(DEBUG_FILE, ARCHIVE_FOLDER + debugArchiveName)
+        archivedDebugs.append(debugArchiveName)
 
         if today == logDate:
             logVersion += 1
@@ -107,10 +108,12 @@ class Logger:
             logVersion = 0
 
         PickleUtil.save(META_FILE, (today, logVersion, archivedDebugs))
+
+        return archiveName, debugArchiveName
     
     @classmethod
     def reset(cls):
-        cls.archive_logs()
+        archiveNames = cls.archive_logs()
 
         infoHandler.close()
         with open(LOG_FILE, "w") as f:
@@ -121,6 +124,8 @@ class Logger:
             f.write("")
         
         cls._create_meta()
+
+        return archiveNames
 
     @staticmethod
     def _create_meta():
