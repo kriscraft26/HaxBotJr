@@ -7,9 +7,7 @@ from logger import Logger
 from msgmaker import decorate_text
 from util.cmdutil import parser
 import util.timeutil as timeutil
-from cog.xptracker import XPTracker
-from cog.wartracker import WarTracker
-from cog.membermanager import MemberManager
+from cog.remotedebugger import RemoteDebugger
 
 
 class DateClock(commands.Cog):
@@ -24,9 +22,7 @@ class DateClock(commands.Cog):
 
         self.initRun = True
 
-        self._xpTracker: XPTracker = bot.get_cog("XPTracker")
-        self._warTracker: WarTracker = bot.get_cog("WarTracker")
-        self._memberManager: MemberManager = bot.get_cog("MemberManager")
+        self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
 
         self._update_loop_interval()
         self._daily_loop.start()
@@ -50,9 +46,6 @@ class DateClock(commands.Cog):
     
     def _on_bi_week_transition(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
-
-        self._xpTracker.reset_xp()
-        self._warTracker.reset_war_count()
 
     def _update_loop_interval(self):
         now = timeutil.now()
