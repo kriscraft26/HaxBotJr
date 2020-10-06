@@ -135,7 +135,9 @@ class ListSelectionMessage(PagedMessage):
 
     def __init__(self, ctx: Context, entries: List[str], cb):
         entryPages = slice_entries(entries, maxEntries=5)
-        pages = list(map(self._make_page, entryPages))
+        pageNum = len(entryPages)
+        pages = [
+            self._make_page(entries, pageNum, i) for i, entries in enumerate(entryPages)]
         super().__init__(pages, ctx.channel, userId=ctx.author.id, forceTrack=True)
         self.entryPages = entryPages
         isCoroutine = iscoroutinefunction(cb)
@@ -143,8 +145,7 @@ class ListSelectionMessage(PagedMessage):
     
     async def _init_send(self):
         msg = await super()._init_send()
-        currPageLen = len(self.entryPages[self.index])
-        for i in range(currPageLen):
+        for i in range(5):
             emoji = ListSelectionMessage.numEmojis[i]
             await self.add_callback(emoji, self.cbs[i])
         return msg
@@ -152,32 +153,17 @@ class ListSelectionMessage(PagedMessage):
     def _wrap_cb(self, i, cb, isCoroutine):
         if isCoroutine:
             async def wrapped_cb():
-                await cb(self, self.entryPages[self.index][i])
+                entries = self.entryPages[self.index]
+                if i < len(entries):
+                    await cb(self, self.entryPages[self.index][i])
         else:
             def wrapped_cb():
-                cb(self, self.entryPages[self.index][i])
+                entries = self.entryPages[self.index]
+                if i < len(entries):
+                    cb(self, self.entryPages[self.index][i])
         return wrapped_cb
 
-    def _make_page(self, entries: List[str]):
+    def _make_page(self, entries: List[str], pageNum, pageIndex):
         page = "\n".join([f"[{i + 1}] {e}" for i, e in enumerate(entries)])
+        page += "\n" + make_page_indicator(pageNum, pageIndex)
         return decorate_text(page)
-    
-    async def next_page(self):
-        await self._update_reactions(super().next_page)
-    
-    async def prev_page(self):
-        await self._update_reactions(super().prev_page)
-    
-    async def _update_reactions(self, updater):
-        prevPageLen = len(self.entryPages[self.index])
-        await updater()
-        currPageLen = len(self.entryPages[self.index])
-
-        if currPageLen > prevPageLen:
-            for i in range(prevPageLen, currPageLen):
-                emoji = ListSelectionMessage.numEmojis[i]
-                await self.add_callback(emoji, self.cbs[i])
-        else:
-            for i in range(currPageLen, prevPageLen):
-                emoji = ListSelectionMessage.numEmojis[i]
-                await self.remove_callback(emoji)
