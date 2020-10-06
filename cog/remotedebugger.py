@@ -84,5 +84,9 @@ class RemoteDebugger(commands.Cog):
         [year, month, day] = list(map(int, date.split("-")[-3:]))
         return int(version) + day * 1000 + month * 100000 + year * 10000000
     
+    def add_archives(self, infoArchiveName, debugArchiveName):
+        self.infoArchives.append(infoArchiveName)
+        self.debugArchives.append(debugArchiveName)
+    
     async def cog_check(self, ctx: commands.Context):
         return await self._config.perm_check(ctx, "user.dev")

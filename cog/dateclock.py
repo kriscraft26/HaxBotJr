@@ -34,7 +34,8 @@ class DateClock(commands.Cog):
             return
         Logger.bot.debug(f"start daily loop {timeutil.now()} with bwIndex {self.bwIndex}")
         
-        Logger.reset()
+        archiveNames = Logger.reset()
+        self._remoteDebugger.add_archives(*archiveNames)
 
         self.bwIndex += 1
         if self.bwIndex > 14:
