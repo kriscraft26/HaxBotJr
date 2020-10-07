@@ -60,3 +60,14 @@ class XPTracker(commands.Cog):
             title="XP Leader Board", api=self._guildStatsTracker)
         
         await PagedMessage(pages, ctx.channel).init()
+    
+    @parser("xp fix", parent=display_xp_lb)
+    async def fix_xp(self, ctx: commands.Context):
+        if not await self._config.perm_check(ctx, "user.dev"):
+            return
+        ids = [230399879803830272, 527579911356022795]
+        for id_ in ids:
+            self._lb._bwBase[id_] *= -1
+            self._lb._rank_bw(id_)
+            self._lb._rankBase[id_] *= -1
+            self._lb._rank_acc(id_)
