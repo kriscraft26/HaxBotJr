@@ -37,7 +37,6 @@ class DateClock(commands.Cog):
         
         archiveNames = Logger.reset()
         self._remoteDebugger.add_archives(*archiveNames)
-        LeaderBoard.update_all_bw_base()
 
         self.bwIndex += 1
         if self.bwIndex > 14:
@@ -49,6 +48,7 @@ class DateClock(commands.Cog):
     
     def _on_bi_week_transition(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
+        LeaderBoard.update_all_bw_base()
 
     def _update_loop_interval(self):
         now = timeutil.now()
