@@ -94,6 +94,7 @@ class LeaderBoard:
             self._rank_stat(id_)
             self._rank_acc(id_)
             self._rank_bw(id_)
+        return val - prev
     
     def remove_id(self, id_: int):
         if id_ in self._stats:
