@@ -64,6 +64,12 @@ class Configuration(commands.Cog):
         if name in self._channels:
             self._channels[name] = self.guild.get_channel(val) if val else None
     
+    async def send(self, channelName, text, **kwargs):
+        channel = self._channels.get(f"channel.{channelName}", None)
+        if not channel:
+            return
+        await channel.send(text, **kwargs)
+
     def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
         if not rank:
