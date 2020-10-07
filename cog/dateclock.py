@@ -5,6 +5,7 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from msgmaker import decorate_text
+from leaderboard import LeaderBoard
 from util.cmdutil import parser
 import util.timeutil as timeutil
 from cog.remotedebugger import RemoteDebugger
@@ -36,6 +37,7 @@ class DateClock(commands.Cog):
         
         archiveNames = Logger.reset()
         self._remoteDebugger.add_archives(*archiveNames)
+        LeaderBoard.update_all_bw_base()
 
         self.bwIndex += 1
         if self.bwIndex > 14:

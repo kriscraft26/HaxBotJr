@@ -35,9 +35,11 @@ class GuildMember:
 
 
 IG_MEMBERS_UPDATE_INTERVAL = 3
+MEMBER_DELETION_INTERVAL = 10  # in minutes
+
 
 @DataManager.register("members", "ignIdMap", "idleMembers", 
-                      mapper={"removedMembers": "idleMembers"})
+                      "_deletionQueue", "_removedMembers")
 class MemberManager(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -47,6 +49,9 @@ class MemberManager(commands.Cog):
         self.ignIdMap: Dict[str, int] = {}
 
         self.idleMembers: Set[int] = set()
+
+        self._deletionQueue: List[int] = []
+        self._removedMembers = {}
 
         self.hasInitMembersUpdate = False
 
@@ -58,38 +63,7 @@ class MemberManager(commands.Cog):
 
     def __loaded__(self):
         self._ig_members_update.start()
-
-        allMembers = list(self.members.values())
-        if allMembers:
-            sampleMember = allMembers[0]
-            if hasattr(sampleMember, "xp"):
-                Logger.bot.debug("detected outdated GuildMember objects, updating...")
-                for member in allMembers:
-                    del member.xp
-                    del member.emerald
-                    del member.warCount
-                    Logger.bot.debug(f"-> {member}")
-        
-        if type(self.idleMembers) == dict:
-            Logger.bot.debug("detected outdated idleMembers, updating...")
-            updated = set()
-            for id_, member in self.idleMembers.items():
-                dMember = self._config.guild.get_member(id_)
-                if dMember and self._config.is_of_group("guild", dMember):
-                    updated.add(id_)
-                    self.members[id_] = member
-                    self.ignIdMap[member.ign] = id_
-                    LeaderBoard.get_lb("xpTotal").set_stat(id_, member.xp.total.val)
-                    LeaderBoard.get_lb("xpAcc").set_stat(id_, member.xp.acc.val)
-                    LeaderBoard.get_lb("warCount").set_stat(id_, member.warCount.val)
-                    LeaderBoard.get_lb("emeraldTotal").set_stat(id_, member.emerald.total.val)
-                    LeaderBoard.get_lb("emeraldAcc").set_stat(id_, member.emerald.acc.val)
-                    del member.xp
-                    del member.emerald
-                    del member.warCount
-                    Logger.bot.debug(f"-> {member}")
-            self.idleMembers = updated
-            Logger.bot.debug(f"-> {self.idleMembers}")
+        self._member_deletion.start()
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
@@ -122,6 +96,17 @@ class MemberManager(commands.Cog):
     async def _before_ig_members_update(self):
         Logger.bot.debug("Starting in-game members update loop")
     
+    @tasks.loop(minutes=MEMBER_DELETION_INTERVAL)
+    async def _member_deletion(self):
+        for id_ in self._deletionQueue:
+            Logger.bot.info(f"deleting {self._removedMembers[id_][0]}")
+            del self._removedMembers[id_]
+        self._deletionQueue = list(self._removedMembers.keys())
+        
+    @_member_deletion.before_loop
+    async def _before_member_deletion(self):
+        Logger.bot.debug("Starting member deletion loop")
+
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
         isGMemberBefore = before.id in self.members
@@ -151,8 +136,7 @@ class MemberManager(commands.Cog):
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
             gMember.rank = currRank
-            Logger.war.info(f"{gMember.ign} war count reset from {gMember.warCount}")
-            gMember.warCount.val = 0
+            LeaderBoard.update_all_rank_base(gMember.id)
         if gMember.vRank != vRank:
             Logger.guild.info(f"{gMember.ign} vRank change {gMember.vRank} -> {vRank}")
             gMember.vRank = vRank
@@ -202,9 +186,19 @@ class MemberManager(commands.Cog):
                 Logger.bot.info(f"{ign} status set to idle")
     
     def _add_member(self, dMember: Member):
+        id_ = dMember.id
+        if id_ in self._removedMembers:
+            gMember, statsInfo = self._removedMembers[id_]
+            Logger.bot.info(f"undo removal of {gMember}")
+
+            del self._removedMembers[id_]
+            if id_ in self._deletionQueue:
+                self._deletionQueue.remove(id_)
+
+            LeaderBoard.force_add_entry(id_, statsInfo)
+
         gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
         
-        id_ = dMember.id
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
 
@@ -222,8 +216,9 @@ class MemberManager(commands.Cog):
         del self.ignIdMap[gMember.ign]
         id_ in self.idleMembers and self.idleMembers.remove(id_)
 
-        LeaderBoard.remove_stats(id_)
-    
+        self._removedMembers[id_] = (gMember, LeaderBoard.get_entry(id_))
+        LeaderBoard.remove_entry(id_)
+
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
     
@@ -242,25 +237,27 @@ class MemberManager(commands.Cog):
         
         m = self.get_member_by_ign(ign)
 
-        stats = LeaderBoard.get_stats(m.id)
-        ranks = LeaderBoard.get_ranks(m.id)
-        statInfo = {name: (stat, ranks[name] + 1) for name, stat in stats.items()}
+        statInfo = LeaderBoard.get_entry(m.id)
 
-        maxStatLen = max(map(lambda n: len(str(n)), stats.values()))
-        maxRankLen = max(map(lambda n: len(str(n)), ranks.values()))
+        maxStatLen = max(map(lambda e: len(str(e[0])), statInfo.values()))
+        maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values()))
 
         separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
         statDisplay = f"%{maxStatLen}d (#%d)\n"
         idleStatus = "-- NOT IN GUILD" if m.id in self.idleMembers else ""
 
         text = ""
-        text += f"Total XP:        {statDisplay}" % statInfo["xpTotal"]
-        text += f"Accumulated XP:  {statDisplay}" % statInfo["xpAcc"]
+        text += f"Total XP:          {statDisplay}" % statInfo["xp"]
+        text += f"Accumulated XP:    {statDisplay}" % statInfo["xpAcc"]
+        text += f"Bi-Weekly XP:      {statDisplay}" % statInfo["xpBw"]
         text += separator
-        text += f"Total Em:        {statDisplay}" % statInfo["emeraldTotal"]
-        text += f"Accumulated Em   {statDisplay}" % statInfo["emeraldAcc"]
+        text += f"Total Em:          {statDisplay}" % statInfo["emerald"]
+        text += f"Accumulated Em     {statDisplay}" % statInfo["emeraldAcc"]
+        text += f"Bi-Weekly Em       {statDisplay}" % statInfo["emeraldBw"]
         text += separator
-        text += f"War Count:       {statDisplay}" % statInfo["warCount"]
+        text += f"Total Wars:        {statDisplay}" % statInfo["warCount"]
+        text += f"Accumulated Wars:  {statDisplay}" % statInfo["warCountAcc"]
+        text += f"Bi-Weekly Wars:    {statDisplay}" % statInfo["warCountBw"]
         text += "\n"
         text += f"discord {m.discord} {idleStatus}"
 

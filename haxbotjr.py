@@ -29,10 +29,8 @@ class HaxBotJr(commands.Bot):
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
 
-        DataManager.load(LeaderBoard("xpTotal", Logger.xp))
-        DataManager.load(LeaderBoard("xpAcc", Logger.xp))
-        DataManager.load(LeaderBoard("emeraldTotal", Logger.em))
-        DataManager.load(LeaderBoard("emeraldAcc", Logger.em))
+        DataManager.load(LeaderBoard("xp", Logger.xp))
+        DataManager.load(LeaderBoard("emerald", Logger.em))
         DataManager.load(LeaderBoard("warCount", Logger.war))
 
         self.add_cog(DataManager.load(Configuration(self)))
@@ -61,7 +59,11 @@ class HaxBotJr(commands.Bot):
         await ctx.send(embed=alert)
     
     def should_suppress_error(self, e: commands.CommandError):
-        return str(e).startswith("The check functions")
+        e = str(e)
+        return \
+            e.startswith("The check functions") or \
+            "the following arguments are required" not in e or \
+            not (e.startswith("Command") and e.endswith("is not found"))
     
     async def on_reaction_add(self, reaction, user):
         await ReactableMessage.update(reaction, user)

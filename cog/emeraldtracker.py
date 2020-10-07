@@ -4,7 +4,7 @@ from discord.ext import commands
 from logger import Logger
 from msgmaker import *
 from leaderboard import LeaderBoard
-from reactablemessage import ReactableMessage, PagedMessage, ConfirmMessage
+from reactablemessage import ReactableMessage, PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from cog.datamanager import DataManager
@@ -22,6 +22,8 @@ class EmeraldTracker(commands.Cog):
 
         self._config: Configuration = bot.get_cog("Configuration")
         self._memberManager: MemberManager= bot.get_cog("MemberManager")
+
+        self._lb: LeaderBoard = LeaderBoard.get_lb("emerald")
     
     @commands.Cog.listener()
     async def on_message(self, message: Message):
@@ -57,17 +59,12 @@ class EmeraldTracker(commands.Cog):
             if ign in self._memberManager.ignIdMap:
                 id_ = self._memberManager.ignIdMap[ign]
                 em = int(sections[2][:-1])
-                LeaderBoard.accumulate(id_, "emerald", em)
-    
-    def reset_em(self):
-        Logger.em.info("Resetting all emeralds")
-        LeaderBoard.get_lb("emeraldAcc").reset_stats()
+                self._lb.set_stat(id_, em)
 
-    @parser("em", ["total"], isGroup=True)
-    async def display_emerald(self, ctx: commands.Context, total):
-        title = ("Total" if total else "Accumulated") + " Emerald Contribution Leader Board"
-        lbName = "emeraldTotal" if total else "emeraldAcc"
-        pages = LeaderBoard.get_lb(lbName).create_pages(
+    @parser("em", ["acc"], ["bw"], isGroup=True)
+    async def display_emerald(self, ctx: commands.Context, acc, bw):
+        title = "Emerald Contribution Leader Board"
+        pages = self._lb.create_pages(acc, bw,
             title=title, lastUpdate=self.lastUpdateTimeStr)
 
         await PagedMessage(pages, ctx.channel).init()
@@ -101,13 +98,3 @@ class EmeraldTracker(commands.Cog):
         alert = make_alert("Action canceled", color=COLOR_SUCCESS)
         await msg.edit_message(embed=alert)
         await msg.un_track()
-    
-    @parser("em reset", parent=display_emerald)
-    async def reset_em_cmd(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.staff"):
-            return
-        
-        text = "Are you sure to reset all members' emerald?"
-        successText = "Successfully reset all members' emerald."
-
-        await ConfirmMessage(ctx, text, successText, lambda msg: self.reset_em()).init()

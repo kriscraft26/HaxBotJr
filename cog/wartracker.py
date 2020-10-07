@@ -24,8 +24,9 @@ class WarTracker(commands.Cog):
 
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._serverListTracker = wynnAPI.serverList.get_tracker()
-
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
+
+        self._lb: LeaderBoard = LeaderBoard.get_lb("warCount")
 
         self._update.start()
     
@@ -77,21 +78,16 @@ class WarTracker(commands.Cog):
     
     def _incrememt_war_count(self, ign: str):
         id_ = self._memberManager.ignIdMap[ign]
-        lb: LeaderBoard = LeaderBoard.get_lb("warCount")
-        prevWc = lb.get_stat(id_)
-        lb.set_stat(id_, prevWc + 1)
+        prevWc = self._lb.get_stat(id_)
+        self._lb.set_stat(id_, prevWc + 1)
     
     @_update.before_loop
     async def _before_update(self):
         Logger.bot.debug("Starting war tracking loop")
-    
-    def reset_war_count(self):
-        Logger.bot.info("resetting all accumulated war counts")
-        LeaderBoard.get_lb("warCount").reset_stats()
 
-    @parser("wc")
-    async def display_war_count_lb(self, ctx: commands.Context):
-        pages = LeaderBoard.get_lb("warCount").create_pages(
+    @parser("wc", ["acc"], ["bw"])
+    async def display_war_count_lb(self, ctx: commands.Context, acc, bw):
+        pages = self._lb.create_pages(acc, bw,
             title="War Count Leader Board", api=self._serverListTracker)
 
         await PagedMessage(pages, ctx.channel).init()
