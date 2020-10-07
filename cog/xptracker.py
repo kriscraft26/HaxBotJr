@@ -40,7 +40,15 @@ class XPTracker(commands.Cog):
             if memberData["name"] in trackedIgns:
                 id_ = self._memberManager.ignIdMap[ memberData["name"]]
                 newTXp = memberData["contributed"]
-                self._lb.set_stat(id_, newTXp)
+                dxp = self._lb.set_stat(id_, newTXp)
+
+                if dxp > 0:
+                    text = "  |  ".join([
+                        f"**{memberData['name']}** (+{dxp})",
+                        f"__Total__ -> {self._lb.get_stat(id_)}",
+                        f"__Accumulated__ -> {self._lb.get_acc(id_)}",
+                        f"__Bi-Weekly__ -> {self._lb.get_bw(id_)}"])
+                    await self._config.send("xpLog", text)
     
     @_update.before_loop
     async def _before_update(self):
