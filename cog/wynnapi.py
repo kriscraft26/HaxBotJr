@@ -134,4 +134,6 @@ class WynnData:
             datetime.timedelta
                 The amount of time passed since last unique API response.
             """
+            if not self.lastUpdateTime:
+                return timedelta(seconds=0)
             return now() - self.lastUpdateTime
