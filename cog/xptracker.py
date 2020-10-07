@@ -45,9 +45,9 @@ class XPTracker(commands.Cog):
                 if dxp > 0:
                     text = "  |  ".join([
                         f"**{memberData['name']}** (+{dxp})",
-                        f"__Total__ -> {self._lb.get_stat(id_)}",
-                        f"__Accumulated__ -> {self._lb.get_acc(id_)}",
-                        f"__Bi-Weekly__ -> {self._lb.get_bw(id_)}"])
+                        f"__Total__ -> {self._lb.get_stat(id_):,}",
+                        f"__Accumulated__ -> {self._lb.get_acc(id_):,}",
+                        f"__Bi-Weekly__ -> {self._lb.get_bw(id_):,}"])
                     await self._config.send("xpLog", text)
     
     @_update.before_loop
