@@ -1,6 +1,7 @@
 import logging
 import os
 import gzip
+from colorama import *
 from queue import Queue
 
 from util.pickleutil import PickleUtil
@@ -16,10 +17,30 @@ META_FILE = LOG_FOLDER + "meta"
 MAX_DEBUG_ARCHIVE = 5
 
 
+init()
+COLORS = {
+    logging.INFO: Back.BLUE,
+    logging.WARNING: Back.YELLOW,
+    logging.ERROR: Back.RED,
+    logging.CRITICAL: Back.RED
+}
+TERM_FMT = f"{Style.BRIGHT}{Back.WHITE}{Fore.BLACK} %s {Fore.LIGHTWHITE_EX}%s %s \
+{Style.RESET_ALL} %s"
+
+
+class CustomFileHandler(logging.FileHandler):
+
+    def handle(self, record: logging.LogRecord):
+        levelColor = COLORS[record.levelno]
+        timeStr = now().strftime("%H:%M:%S")
+        print(TERM_FMT % (timeStr, levelColor, record.levelname, record.msg))
+        return super().handle(record)
+
+
 formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s] [%(name)s]: %(message)s", 
     datefmt="%H:%M:%S")
 
-infoHandler = logging.FileHandler(filename=LOG_FILE, mode="w", encoding="utf-8")
+infoHandler = CustomFileHandler(filename=LOG_FILE, mode="w", encoding="utf-8")
 infoHandler.setFormatter(formatter)
 infoHandler.createLock()
 

@@ -1,6 +1,7 @@
 from aiohttp import ClientSession
 from asyncio import run
 from traceback import print_tb
+from colorama import Back, Fore, Style
 
 from discord import Activity, ActivityType
 from discord.utils import find
@@ -61,6 +62,7 @@ class HaxBotJr(commands.Bot):
             return
         await ctx.send(embed=make_alert("oh oopsie owo", 
             subtext="Pwease contact Pucaet abouwt thiws uwu"))
+        print(Fore.RED + Style.BRIGHT)
         await super().on_command_error(ctx, e)
     
     async def on_reaction_add(self, reaction, user):
