@@ -6,7 +6,7 @@ from discord import File
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_alert, decorate_text
+from msgmaker import make_alert, decorate_text, COLOR_SUCCESS
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
@@ -98,7 +98,8 @@ class SnapshotManager(commands.Cog):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
         snapId = self.save_snapshot(offset=False)
-        ctx.send(f"Snapshot saved with the id {snapId}")
+        await ctx.send(embed=make_alert(f"Snapshot saved with the id {snapId}",
+            color=COLOR_SUCCESS))
     
     @parser("snap data", "index", parent=display_snapshots)
     async def get_snapshot_data(self, ctx: commands.Context, index: str):
