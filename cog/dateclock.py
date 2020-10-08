@@ -17,7 +17,7 @@ class DateClock(commands.Cog):
         now = timeutil.now()
         deltaDay = (now - timeutil.BI_WEEK_REF).days
         self.bwIndex = deltaDay % 14 + 1
-        Logger.bot.debug(f"Started at {now} with bwIndex of {self.bwIndex}")
+        Logger.bot.info(f"Started at {now} with bwIndex of {self.bwIndex}")
 
         self.initRun = True
 
@@ -40,7 +40,7 @@ class DateClock(commands.Cog):
         if self.bwIndex > 14:
             self.bwIndex = 1
             self._on_bi_week_transition()
-        Logger.bot.debug(f"bwIndex -> {self.bwIndex}")
+        Logger.bot.info(f"bwIndex -> {self.bwIndex}")
 
         self._update_loop_interval()
     
