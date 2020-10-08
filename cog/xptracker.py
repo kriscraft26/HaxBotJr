@@ -9,6 +9,7 @@ from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
 from cog.configuration import Configuration
 from cog.datamanager import DataManager
+from cog.snapshotmanager import SnapshotManager
 
 
 XP_UPDATE_INTERVAL = 6
@@ -24,12 +25,18 @@ class XPTracker(commands.Cog):
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._config: Configuration = bot.get_cog("Configuration")
+        self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
         self._lastLoggedVal = {}
 
         self._update.start()
         self._xp_log.start()
+        self._snapshotManager.add("XPTracker", self)
+    
+    def __snap__(self):
+        return self._snapshotManager.make_lb_snapshot(self._lb, 
+            title="XP Leader Board", api=self._guildStatsTracker)
 
     @tasks.loop(seconds=XP_UPDATE_INTERVAL)
     async def _update(self):
@@ -73,10 +80,17 @@ class XPTracker(commands.Cog):
     async def _before_xp_log(self):
         Logger.bot.debug("Starting xp logging loop")
     
-    @parser("xp", ["acc"], ["bw"], isGroup=True)
-    async def display_xp_lb(self, ctx: commands.Context, acc, bw):
-        pages = self._lb.create_pages(acc, bw,
-            title="XP Leader Board", api=self._guildStatsTracker)
+    @parser("xp", ["acc"], ["bw"], "-snap", isGroup=True)
+    async def display_xp_lb(self, ctx: commands.Context, acc, bw, snap):
+        if snap:
+            snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
+                "XPTracker")
+            if not snapshot:
+                return
+            pages = snapshot[acc][bw]
+        else:
+            pages = self._lb.create_pages(acc, bw,
+                title="XP Leader Board", api=self._guildStatsTracker)
         
         await PagedMessage(pages, ctx.channel).init()
     
