@@ -8,7 +8,7 @@ from discord.ext import commands
 from logger import Logger
 from msgmaker import make_alert
 from util.cmdutil import parser
-from util.pickleutil import PickleUtil
+from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
 from cog.configuration import Configuration
 
@@ -51,13 +51,15 @@ class SnapshotManager(commands.Cog):
         if snapId in self._snapCache:
             return self._snapCache[snapId]
 
-        # TODO error bad >:(
-        snapshot = PickleUtil.load(self.make_snapshot_path(snapId), initData=None)
-        if snapshot:
-            self._snapCache[snapId] = snapshot
-        else:
+        try:
+            with open(self.make_snapshot_path(snapId), "rb") as f:
+                snapshot = pickle.load(f)
+        except FileNotFoundError:
             alert = make_alert(f"Snapshot with id {snapId} doesn't exist")
             await ctx.send(embed=alert)
+            return
+
+        self._snapCache[snapId] = snapshot
         return snapshot
     
     @parser("snap", isGroup=True)
