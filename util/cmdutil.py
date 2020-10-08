@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from discord.ext import commands
 
+from msgmaker import make_alert
+
 
 class CatchableArgumentParser(ArgumentParser):
 
@@ -14,7 +16,7 @@ class CatchableArgumentParser(ArgumentParser):
 "arg..."    greedy argument
 """
 def parser(name, *args, isGroup=False, parent=None):
-    argParser = CatchableArgumentParser(prog=f"]{name}")
+    argParser = CatchableArgumentParser(prog=f"]{name}", add_help=False)
     for arg in args:
         argType = type(arg)
         if argType == str:
@@ -33,6 +35,11 @@ def parser(name, *args, isGroup=False, parent=None):
             if isGroup else p.command(name=funcName)
         @cmdWrapper
         async def parsable(self, ctx, *arguments):
+            try:
+                args = argParser.parse_args(arguments)
+            except Exception as e:
+                await ctx.send(embed=make_alert(":".join(str(e).split(":")[2:])))
+                return
             await func(self, ctx, **vars(argParser.parse_args(arguments)))
         return parsable
     return wrapper
