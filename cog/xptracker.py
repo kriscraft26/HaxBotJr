@@ -25,6 +25,7 @@ class XPTracker(commands.Cog):
         self._config: Configuration = bot.get_cog("Configuration")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
+        self._lastLoggedVal = {}
 
         self._update.start()
 
@@ -43,12 +44,17 @@ class XPTracker(commands.Cog):
                 dxp = self._lb.set_stat(id_, newTXp)
 
                 if dxp > 0:
+                    stat = self._lb.get_stat(id_)
+                    prev = self._lastLoggedVal.get(id_, -1)
+                    if stat == prev:
+                        return
                     text = "  |  ".join([
                         f"**{memberData['name']}** (+{dxp})",
-                        f"__Total__ -> {self._lb.get_stat(id_):,}",
+                        f"__Total__ -> {stat:,}",
                         f"__Accumulated__ -> {self._lb.get_acc(id_):,}",
                         f"__Bi-Weekly__ -> {self._lb.get_bw(id_):,}"])
                     await self._config.send("xpLog", text)
+                    self._lastLoggedVal[id_] = stat
     
     @_update.before_loop
     async def _before_update(self):
