@@ -10,6 +10,7 @@ from util.cmdutil import parser
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
+from cog.snapshotmanager import SnapshotManager
 
 
 WAR_SERVERS_UPDATE_INTERVAL = 3
@@ -25,10 +26,16 @@ class WarTracker(commands.Cog):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._serverListTracker = wynnAPI.serverList.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
+        self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("warCount")
 
         self._update.start()
+        self._snapshotManager.add("WarTracker", self)
+    
+    def __snap__(self):
+        return self._snapshotManager.make_lb_snapshot(self._lb, 
+            title="War Count Leader Board", api=self._serverListTracker)
     
     @tasks.loop(seconds=WAR_SERVERS_UPDATE_INTERVAL)
     async def _update(self):
@@ -85,10 +92,17 @@ class WarTracker(commands.Cog):
     async def _before_update(self):
         Logger.bot.debug("Starting war tracking loop")
 
-    @parser("wc", ["acc"], ["bw"])
-    async def display_war_count_lb(self, ctx: commands.Context, acc, bw):
-        pages = self._lb.create_pages(acc, bw,
-            title="War Count Leader Board", api=self._serverListTracker)
+    @parser("wc", ["acc"], ["bw"], "-snap")
+    async def display_war_count_lb(self, ctx: commands.Context, acc, bw, snap):
+        if snap:
+            snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
+                "WarTracker")
+            if not snapshot:
+                return
+            pages = snapshot[acc][bw]
+        else:
+            pages = self._lb.create_pages(acc, bw,
+                title="War Count Leader Board", api=self._serverListTracker)
 
         await PagedMessage(pages, ctx.channel).init()
 
