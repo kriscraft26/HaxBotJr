@@ -60,10 +60,10 @@ def make_entry_pages(entries, maxEntries=MAX_ENTRY_PER_PAGE, **decoArgs):
 
 def make_stat_entries(lb, igns, members, statSelector):
     maxIgnLen = max(map(len, igns), default=0)
-    entryFmt = f"[%-{len(str(len(lb)))}d]  %-{maxIgnLen}s  |  %s"
+    entryFmt = "{0:<%d}  {1:%d}  |  {2:>,}" % (len(str(len(lb))), maxIgnLen)
 
     entries = []
     for i, id_ in enumerate(lb):
         gMember = members[id_]
-        entries.append(entryFmt % (i + 1, gMember.ign, statSelector(gMember)))
+        entries.append(entryFmt.format(i + 1, gMember.ign, statSelector(gMember)))
     return entries

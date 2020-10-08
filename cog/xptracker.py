@@ -62,7 +62,7 @@ class XPTracker(commands.Cog):
             if stat == prev:
                 continue
             text = "  |  ".join([
-                f"**{self._memberManager.members[id_].ign}** (+{dxp})",
+                f"**{self._memberManager.members[id_].ign}** (+{dxp:,})",
                 f"__Total__ -> {stat:,}",
                 f"__Acc__ -> {self._lb.get_acc(id_):,}",
                 f"__BW__ -> {self._lb.get_bw(id_):,}"])

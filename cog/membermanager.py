@@ -243,25 +243,25 @@ class MemberManager(commands.Cog):
     def make_stats_msg(self, member: GuildMember):
         statInfo = LeaderBoard.get_entry(member.id)
 
-        maxStatLen = max(map(lambda e: len(str(e[0])), statInfo.values()))
+        maxStatLen = len("{0:,}".format(max(map(lambda e: e[0], statInfo.values()))))
         maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values()))
 
         separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
-        statDisplay = f"%{maxStatLen}d (#%d)\n"
+        statDisplay = "{0:%d,} (#{1})\n" % maxStatLen
         idleStatus = "-- NOT IN GUILD" if member.id in self.idleMembers else ""
 
         text = ""
-        text += f"Total XP:          {statDisplay}" % statInfo["xp"]
-        text += f"Accumulated XP:    {statDisplay}" % statInfo["xpAcc"]
-        text += f"Bi-Weekly XP:      {statDisplay}" % statInfo["xpBw"]
+        text += f"Total XP:          {statDisplay}".format(*statInfo["xp"])
+        text += f"Accumulated XP:    {statDisplay}".format(*statInfo["xpAcc"])
+        text += f"Bi-Weekly XP:      {statDisplay}".format(*statInfo["xpBw"])
         text += separator
-        text += f"Total Em:          {statDisplay}" % statInfo["emerald"]
-        text += f"Accumulated Em     {statDisplay}" % statInfo["emeraldAcc"]
-        text += f"Bi-Weekly Em       {statDisplay}" % statInfo["emeraldBw"]
+        text += f"Total Em:          {statDisplay}".format(*statInfo["emerald"])
+        text += f"Accumulated Em     {statDisplay}".format(*statInfo["emeraldAcc"])
+        text += f"Bi-Weekly Em       {statDisplay}".format(*statInfo["emeraldBw"])
         text += separator
-        text += f"Total Wars:        {statDisplay}" % statInfo["warCount"]
-        text += f"Accumulated Wars:  {statDisplay}" % statInfo["warCountAcc"]
-        text += f"Bi-Weekly Wars:    {statDisplay}" % statInfo["warCountBw"]
+        text += f"Total Wars:        {statDisplay}".format(*statInfo["warCount"])
+        text += f"Accumulated Wars:  {statDisplay}".format(*statInfo["warCountAcc"])
+        text += f"Bi-Weekly Wars:    {statDisplay}".format(*statInfo["warCountBw"])
         text += "\n"
         text += f"discord {member.discord} {idleStatus}"
 
