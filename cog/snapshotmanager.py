@@ -89,6 +89,12 @@ class SnapshotManager(commands.Cog):
             result = result[path]
         return result
     
+    def make_lb_snapshot(self, lb, **decoArgs):
+        pagesTotal = lb.create_pages(False, False, **decoArgs)
+        pagesAcc = lb.create_pages(True, False, **decoArgs)
+        pagesBw = lb.create_pages(False, True, **decoArgs)
+        return [[pagesTotal, pagesBw], [pagesAcc, pagesAcc]]
+    
     @parser("snap", isGroup=True)
     async def display_snapshots(self, ctx: commands.Context):
         await ctx.send("not implemented uwu")

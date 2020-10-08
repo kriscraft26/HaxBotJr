@@ -31,13 +31,8 @@ class EmeraldTracker(commands.Cog):
     
     def __snap__(self):
         title = "Emerald Contribution Leader Board"
-        emTotal = self._lb.create_pages(False, False,
+        return self._snapshotManager.make_lb_snapshot(self._lb, 
             title=title, lastUpdate=self.lastUpdateTimeStr)
-        emAcc = self._lb.create_pages(True, False,
-            title=title, lastUpdate=self.lastUpdateTimeStr)
-        emBw = self._lb.create_pages(False, True,
-            title=title, lastUpdate=self.lastUpdateTimeStr)
-        return [[emTotal, emBw], [emAcc, emAcc]]
     
     @commands.Cog.listener()
     async def on_message(self, message: Message):
