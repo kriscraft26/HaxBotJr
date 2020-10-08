@@ -6,7 +6,7 @@ from discord import File
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_alert
+from msgmaker import make_alert, decorate_text
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
@@ -74,6 +74,20 @@ class SnapshotManager(commands.Cog):
 
         self._snapCache[snapId] = snapshot
         return snapshot
+    
+    async def get_snapshot_cmd(self, ctx, index, *paths):
+        snapId = await self.parse_index(ctx, index)
+        if not snapId:
+            return
+        snapshot = await self.get_snapshot(ctx, snapId)
+        if not snapshot:
+            return
+        await ctx.send(decorate_text(f" following result is from Snapshot {snapId}"))
+
+        result = snapshot
+        for path in paths:
+            result = result[path]
+        return result
     
     @parser("snap", isGroup=True)
     async def display_snapshots(self, ctx: commands.Context):
