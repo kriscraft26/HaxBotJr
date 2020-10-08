@@ -33,7 +33,7 @@ class SnapshotManager(commands.Cog):
     
     def save_snapshot(self, offset=True):
         snapId = self.make_snapshot_id(now().date() - timedelta(days=offset))
-        Logger.bot.debug(f"Saving snapshot with id {snapId}")
+        Logger.bot.info(f"Saving snapshot with id {snapId}")
         snapshot = self.make_snapshot()
         self._snapCache[snapId] = snapshot
         PickleUtil.save(self.make_snapshot_path(snapId), snapshot)
@@ -42,7 +42,7 @@ class SnapshotManager(commands.Cog):
     def make_snapshot(self):
         return {id_: obj.__snap__() for id_, obj in self._objects}
     
-    async def get_snapshot(self, ctx: commands.Context, index: str):
+    async def parse_index(self, ctx, index: str):
         if index.isnumeric():
             index = int(index)
             snapId = self.make_snapshot_id(now().date() - timedelta(days=14 * index))
@@ -58,7 +58,9 @@ class SnapshotManager(commands.Cog):
                     alert = make_alert(f"bad snapshot index format")
                     await ctx.send(embed=alert)
                     return
+        return snapId
 
+    async def get_snapshot(self, ctx: commands.Context, snapId: str):
         if snapId in self._snapCache:
             return self._snapCache[snapId]
 
