@@ -13,11 +13,9 @@ from cog.remotedebugger import RemoteDebugger
 
 class DateClock(commands.Cog):
 
-    BI_WEEK_REF = timeutil.add_tz_info(datetime.strptime("2020/09/13", "%Y/%m/%d"))
-
     def __init__(self, bot: commands.Bot):
         now = timeutil.now()
-        deltaDay = (now - DateClock.BI_WEEK_REF).days
+        deltaDay = (now - timeutil.BI_WEEK_REF).days
         self.bwIndex = deltaDay % 14 + 1
         Logger.bot.debug(f"Started at {now} with bwIndex of {self.bwIndex}")
 
