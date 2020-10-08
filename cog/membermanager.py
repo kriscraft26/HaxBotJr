@@ -294,8 +294,8 @@ class MemberManager(commands.Cog):
         title = ("Idle " if idle else "") + "Guild Members"
         statSelector = lambda m: m.discord
         
-        return make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
-            title=title)
+        return make_entry_pages(make_stat_entries(
+            lb, igns, members, statSelector, strStat=True), title=title)
 
     @parser("members", ["idle"], "-snap", isGroup=True)
     async def display_members(self, ctx: commands.Context, idle, snap):

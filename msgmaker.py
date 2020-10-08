@@ -58,9 +58,10 @@ def make_entry_pages(entries, maxEntries=MAX_ENTRY_PER_PAGE, **decoArgs):
     return list(map(lambda _: decorate_text(pageFmt(_), **decoArgs), enumerate(pages)))
 
 
-def make_stat_entries(lb, igns, members, statSelector):
+def make_stat_entries(lb, igns, members, statSelector, strStat=False):
     maxIgnLen = max(map(len, igns), default=0)
-    entryFmt = "{0:<%d}  {1:%d}  |  {2:>,}" % (len(str(len(lb))), maxIgnLen)
+    entryFmt = "{0:<%d}  {1:%d}  |  {2:>%s}" % (
+        len(str(len(lb))), maxIgnLen, "" if strStat else ",")
 
     entries = []
     for i, id_ in enumerate(lb):
