@@ -1,5 +1,6 @@
 from aiohttp import ClientSession
 from asyncio import run
+from traceback import print_tb
 
 from discord import Activity, ActivityType
 from discord.utils import find
@@ -51,23 +52,16 @@ class HaxBotJr(commands.Bot):
         Logger.archive_logs()
         run(cls.session.close())
 
-    async def on_command_error(self, ctx: commands.Context, e: commands.CommandError):
-        cmd = str(ctx.command)
-        if self.should_suppress_error(e):
-            msg = ctx.message
-            print(f"suppressed error: {e} from '{msg.content}' in #{msg.channel}")
+    async def on_command_error(self, ctx: commands.Context, e: Exception):
+        eStr = str(e)
+        if eStr.startswith("The check functions"):
             return
-        e = str(e)
-        alert = make_alert(e, title="Command Error")
-        await ctx.send(embed=alert)
-    
-    def should_suppress_error(self, e: commands.CommandError):
-        e = str(e)
-        return \
-            e.startswith("The check functions") and \
-            "the following arguments are required" not in e and \
-            not (e.startswith("Command") and e.endswith("is not found")) and \
-            "unrecognized arguments" not in e
+        if eStr.startswith("Command") and eStr.endswith("is not found"):
+            await ctx.send(embed=make_alert(eStr))
+            return
+        await ctx.send(embed=make_alert("oh oopsie owo", 
+            subtext="Pwease contact Pucaet abouwt thiws uwu"))
+        await super().on_command_error(ctx, e)
     
     async def on_reaction_add(self, reaction, user):
         await ReactableMessage.update(reaction, user)
