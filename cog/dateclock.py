@@ -9,6 +9,7 @@ from leaderboard import LeaderBoard
 from util.cmdutil import parser
 import util.timeutil as timeutil
 from cog.remotedebugger import RemoteDebugger
+from cog.snapshotmanager import SnapshotManager
 
 
 class DateClock(commands.Cog):
@@ -22,6 +23,7 @@ class DateClock(commands.Cog):
         self.initRun = True
 
         self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
+        self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._update_loop_interval()
         self._daily_loop.start()
@@ -46,6 +48,7 @@ class DateClock(commands.Cog):
     
     def _on_bi_week_transition(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
+        self._snapshotManager.save_snapshot()
         LeaderBoard.update_all_bw_base()
 
     def _update_loop_interval(self):
