@@ -51,8 +51,8 @@ class XPTracker(commands.Cog):
                     text = "  |  ".join([
                         f"**{memberData['name']}** (+{dxp})",
                         f"__Total__ -> {stat:,}",
-                        f"__Accumulated__ -> {self._lb.get_acc(id_):,}",
-                        f"__Bi-Weekly__ -> {self._lb.get_bw(id_):,}"])
+                        f"__Acc__ -> {self._lb.get_acc(id_):,}",
+                        f"__BW__ -> {self._lb.get_bw(id_):,}"])
                     await self._config.send("xpLog", text)
                     self._lastLoggedVal[id_] = stat
     
