@@ -11,6 +11,7 @@ from util.cmdutil import parser
 from cog.wynnapi import WynnAPI
 from cog.configuration import Configuration
 from cog.datamanager import DataManager
+from cog.snapshotmanager import SnapshotManager
 
 
 class GuildMember:
@@ -58,12 +59,22 @@ class MemberManager(commands.Cog):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
         self._igMembers: Set[str] = set()
-
         self._config: Configuration = bot.get_cog("Configuration")
+        self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
+
+        self._snapshotManager.add("MemberManager", self)
 
     def __loaded__(self):
         self._ig_members_update.start()
         self._member_deletion.start()
+    
+    def __snap__(self):
+        return {
+            "stats": {m.ign: self.make_stats_msg(m) for m in self.members.values()},
+            "members": self.make_members_pages(False),
+            "members.idle": self.make_members_pages(True),
+            "members.missing": self.make_members_missing_msg()
+        }
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
@@ -228,23 +239,16 @@ class MemberManager(commands.Cog):
     
     def get_member_by_ign(self, ign: str) -> GuildMember:
         return self.members[self.ignIdMap[ign]]
-
-    @parser("stats", "ign")
-    async def display_stats(self, ctx: commands.Context, ign: str):
-        if ign not in self.ignIdMap:
-            await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
-            return
-        
-        m = self.get_member_by_ign(ign)
-
-        statInfo = LeaderBoard.get_entry(m.id)
+    
+    def make_stats_msg(self, member: GuildMember):
+        statInfo = LeaderBoard.get_entry(member.id)
 
         maxStatLen = max(map(lambda e: len(str(e[0])), statInfo.values()))
         maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values()))
 
         separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
         statDisplay = f"%{maxStatLen}d (#%d)\n"
-        idleStatus = "-- NOT IN GUILD" if m.id in self.idleMembers else ""
+        idleStatus = "-- NOT IN GUILD" if member.id in self.idleMembers else ""
 
         text = ""
         text += f"Total XP:          {statDisplay}" % statInfo["xp"]
@@ -259,31 +263,62 @@ class MemberManager(commands.Cog):
         text += f"Accumulated Wars:  {statDisplay}" % statInfo["warCountAcc"]
         text += f"Bi-Weekly Wars:    {statDisplay}" % statInfo["warCountBw"]
         text += "\n"
-        text += f"discord {m.discord} {idleStatus}"
+        text += f"discord {member.discord} {idleStatus}"
 
-        vRank = f"<{m.vRank}> " if m.vRank else ""
-        title = f"[{m.rank}] {vRank}{m.ign}"
+        vRank = f"<{member.vRank}> " if member.vRank else ""
+        title = f"[{member.rank}] {vRank}{member.ign}"
 
-        text = decorate_text(text, title=title)
+        return decorate_text(text, title=title)
+
+    @parser("stats", "ign", "-snap")
+    async def display_stats(self, ctx: commands.Context, ign, snap):
+        if snap:
+            statsSnap = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
+                "MemberManager", "stats")
+            if ign not in statsSnap:
+                await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
+                return
+            text = statsSnap[ign]
+        else:
+            if ign not in self.ignIdMap:
+                await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
+                return
+            text = self.make_stats_msg(self.get_member_by_ign(ign))
+        
         await ctx.send(text)
     
-    @parser("members", ["idle"], isGroup=True)
-    async def display_members(self, ctx: commands.Context, idle):
+    def make_members_pages(self, idle):
         lb = self.idleMembers if idle else self.members.keys()
         igns = self.ignIdMap.keys()
         members = self.members
         title = ("Idle " if idle else "") + "Guild Members"
         statSelector = lambda m: m.discord
         
-        pages = make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
+        return make_entry_pages(make_stat_entries(lb, igns, members, statSelector),
             title=title)
+
+    @parser("members", ["idle"], "-snap", isGroup=True)
+    async def display_members(self, ctx: commands.Context, idle, snap):
+        if snap:
+            pages = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
+                "MemberManager", "members" + (".idle" if idle else ""))
+        else:
+            pages = self.make_members_pages(idle)
         await PagedMessage(pages, ctx.channel).init()
     
-    @parser("members missing", parent=display_members)
-    async def display_missing_members(self, ctx: commands.Context):
+    def make_members_missing_msg(self):
         trackedIgns = self.get_igns_set()
         missingIgns = self._igMembers.difference(trackedIgns)
-        await ctx.send(", ".join(missingIgns))
+        return ", ".join(missingIgns)
+
+    @parser("members missing", "-snap", parent=display_members)
+    async def display_missing_members(self, ctx: commands.Context, snap):
+        if snap:
+            text = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
+                "MemberManager", "members.missing")
+        else:
+            text = self.make_members_missing_msg()
+        await ctx.send(text)
 
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
