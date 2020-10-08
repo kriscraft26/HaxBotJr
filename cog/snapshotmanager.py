@@ -40,7 +40,7 @@ class SnapshotManager(commands.Cog):
         return snapId
     
     def make_snapshot(self):
-        return {id_: obj.__snap__() for id_, obj in self._objects}
+        return {id_: obj.__snap__() for id_, obj in self._objects.items()}
     
     async def parse_index(self, ctx, index: str):
         if index.isnumeric():
