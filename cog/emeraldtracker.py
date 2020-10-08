@@ -10,6 +10,7 @@ from util.timeutil import now
 from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.membermanager import MemberManager
+from cog.snapshotmanager import SnapshotManager
 
 
 @DataManager.register("lastUpdateTimeStr")
@@ -22,8 +23,21 @@ class EmeraldTracker(commands.Cog):
 
         self._config: Configuration = bot.get_cog("Configuration")
         self._memberManager: MemberManager= bot.get_cog("MemberManager")
+        self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("emerald")
+
+        self._snapshotManager.add("EmeraldTracker", self)
+    
+    def __snap__(self):
+        title = "Emerald Contribution Leader Board"
+        emTotal = self._lb.create_pages(False, False,
+            title=title, lastUpdate=self.lastUpdateTimeStr)
+        emAcc = self._lb.create_pages(True, False,
+            title=title, lastUpdate=self.lastUpdateTimeStr)
+        emBw = self._lb.create_pages(False, True,
+            title=title, lastUpdate=self.lastUpdateTimeStr)
+        return [[emTotal, emBw], [emAcc, emAcc]]
     
     @commands.Cog.listener()
     async def on_message(self, message: Message):
@@ -61,11 +75,18 @@ class EmeraldTracker(commands.Cog):
                 em = int(sections[2][:-1])
                 self._lb.set_stat(id_, em)
 
-    @parser("em", ["acc"], ["bw"], isGroup=True)
-    async def display_emerald(self, ctx: commands.Context, acc, bw):
-        title = "Emerald Contribution Leader Board"
-        pages = self._lb.create_pages(acc, bw,
-            title=title, lastUpdate=self.lastUpdateTimeStr)
+    @parser("em", ["acc"], ["bw"], "-snap", isGroup=True)
+    async def display_emerald(self, ctx: commands.Context, acc, bw, snap):
+        if snap:
+            snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
+                "EmeraldTracker")
+            if not snapshot:
+                return
+            pages = snapshot[acc][bw]
+        else:
+            title = "Emerald Contribution Leader Board"
+            pages = self._lb.create_pages(acc, bw,
+                title=title, lastUpdate=self.lastUpdateTimeStr)
 
         await PagedMessage(pages, ctx.channel).init()
 
