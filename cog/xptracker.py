@@ -54,13 +54,14 @@ class XPTracker(commands.Cog):
         for id_ in self._memberManager.members:
             stat = self._lb.get_stat(id_)
             prev = self._lastLoggedVal.get(id_, -1)
+            print(stat, prev)
             if prev == -1:
                 self._lastLoggedVal[id_] = stat
-                return
+                continue
 
             dxp = stat - prev
             if stat == prev:
-                return
+                continue
             text = "  |  ".join([
                 f"**{self._memberManager.members[id_].ign}** (+{dxp})",
                 f"__Total__ -> {stat:,}",
