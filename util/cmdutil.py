@@ -13,18 +13,24 @@ class CatchableArgumentParser(ArgumentParser):
 """
 "arg"       positional argument
 ["arg"]     flag argument
-"arg..."    greedy argument
+"arg..."    extend argument
+"-arg"      store argument
 """
 def parser(name, *args, isGroup=False, parent=None):
     argParser = CatchableArgumentParser(prog=f"]{name}", add_help=False)
     for arg in args:
         argType = type(arg)
         if argType == str:
+            #  "arg..."
             if arg.endswith("..."):
                 arg = arg[:-3]
                 argParser.add_argument(dest=arg, action="extend", nargs="+", type=str)
+            elif arg[0] == "-":
+                arg = arg[1:]
+                argParser.add_argument(f"-{arg[0]}", f"--{arg}", action="store", dest=arg)
             else:
                 argParser.add_argument(dest=arg)
+        #  ["arg"]
         elif argType == list:
             arg = arg[0]
             argParser.add_argument(f"-{arg[0]}", f"--{arg}", action="store_true", dest=arg)
