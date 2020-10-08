@@ -1,12 +1,14 @@
 from datetime import timedelta, datetime
 from io import StringIO
 from pprint import pformat
+from os import listdir
 
 from discord import File
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_alert, decorate_text, COLOR_SUCCESS
+from msgmaker import *
+from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
@@ -97,7 +99,9 @@ class SnapshotManager(commands.Cog):
     
     @parser("snap", isGroup=True)
     async def display_snapshots(self, ctx: commands.Context):
-        await ctx.send("not implemented uwu")
+        ids = [f[:-9] for f in listdir("./snapshot/") if f.endswith(".snapshot")]
+        pages = make_entry_pages(ids, title="Snapshots")
+        await PagedMessage(pages, ctx.channel).init()
 
     @parser("snap forcemake", parent=display_snapshots)
     async def force_make_snapshot(self, ctx: commands.Context):
