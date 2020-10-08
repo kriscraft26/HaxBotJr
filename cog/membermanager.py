@@ -275,6 +275,8 @@ class MemberManager(commands.Cog):
         if snap:
             statsSnap = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
                 "MemberManager", "stats")
+            if not statsSnap:
+                return
             if ign not in statsSnap:
                 await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
                 return
@@ -302,6 +304,8 @@ class MemberManager(commands.Cog):
         if snap:
             pages = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
                 "MemberManager", "members" + (".idle" if idle else ""))
+            if not pages:
+                return
         else:
             pages = self.make_members_pages(idle)
         await PagedMessage(pages, ctx.channel).init()
@@ -316,6 +320,8 @@ class MemberManager(commands.Cog):
         if snap:
             text = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
                 "MemberManager", "members.missing")
+            if not text:
+                return
         else:
             text = self.make_members_missing_msg()
         await ctx.send(text)
