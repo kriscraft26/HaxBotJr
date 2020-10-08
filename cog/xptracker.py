@@ -29,6 +29,7 @@ class XPTracker(commands.Cog):
         self._lastLoggedVal = {}
 
         self._update.start()
+        self._xp_log.start()
 
     @tasks.loop(seconds=XP_UPDATE_INTERVAL)
     async def _update(self):
