@@ -90,7 +90,10 @@ class SnapshotManager(commands.Cog):
     async def get_snapshot_data(self, ctx: commands.Context, index: str):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
-        snapshot = await self.get_snapshot(ctx, index)
+        snapId = await self.parse_index(ctx, index)
+        if not snapId:
+            return
+        snapshot = await self.get_snapshot(ctx, snapId)
         if not snapshot:
             return
-        await ctx.send(file=File(StringIO(pformat(snapshot)), filename="snapshot.txt"))
+        await ctx.send(file=File(StringIO(pformat(snapshot)), filename=f"{snapId}.txt"))
