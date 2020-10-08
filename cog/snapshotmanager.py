@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from io import StringIO
 from pprint import pformat
 
@@ -29,10 +29,11 @@ class SnapshotManager(commands.Cog):
     
     def make_snapshot_id(self, date):
         lower, upper = get_bw_range(date)
-        return lower.strftime("%Y/%m/%d-") + upper.strftime("%m/%d")
+        return lower.strftime("%Y.%m.%d-") + upper.strftime("%Y.%m.%d")
     
     def save_snapshot(self, offset=True):
         snapId = self.make_snapshot_id(now().date() - timedelta(days=offset))
+        Logger.bot.debug(f"Saving snapshot with id {snapId}")
         snapshot = self.make_snapshot()
         self._snapCache[snapId] = snapshot
         PickleUtil.save(self.make_snapshot_path(snapId), snapshot)
@@ -46,7 +47,17 @@ class SnapshotManager(commands.Cog):
             index = int(index)
             snapId = self.make_snapshot_id(now().date() - timedelta(days=14 * index))
         else:
-            snapId = index
+            index = index.replace("/", ".")
+            if "-" in index:
+                snapId = index
+            else:
+                try:
+                    snapId = self.make_snapshot_id(
+                        datetime.strptime(index, "%Y.%m.%d").date())
+                except:
+                    alert = make_alert(f"bad snapshot index format")
+                    await ctx.send(embed=alert)
+                    return
 
         if snapId in self._snapCache:
             return self._snapCache[snapId]
