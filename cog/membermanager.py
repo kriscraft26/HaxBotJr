@@ -252,20 +252,25 @@ class MemberManager(commands.Cog):
     def make_stats_msg(self, member: GuildMember):
         statInfo = LeaderBoard.get_entry(member.id)
 
-        maxStatLen = len("{0:,}".format(max(map(lambda e: e[0], statInfo.values()))))
-        maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values()))
+        statTypes = ["xp", "emerald", "warCount"]
+        statTypeTypes = [("Total", "Total"), ("Acc", "Accumulated"), ("Bw", "Bi-Weekly")]
 
-        separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
-        headDisplay = "{0:->%d}\n" % (maxStatLen + maxRankLen + 4)
+        maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values())) + 4
+        maxStatLen = -1
+        for t in statTypes:
+            maxStatLen = max([maxStatLen, len(str(statInfo[t][0])) - maxRankLen, 
+                              len(f"{statInfo[t + 'Total'][0]:,}")])
+
+        headDisplay = "{0:->%d}\n" % (maxStatLen + maxRankLen)
         statDisplay = "{0:%d,} (#{1})\n" % maxStatLen
         idleStatus = "-- NOT IN GUILD" if member.id in self.idleMembers else ""
 
         sections = []
-        for t in ["xp", "emerald", "warCount"]:
+        for t in statTypes:
             s = ""
             s += f"{t:-<14}{headDisplay}".format(statInfo[t][0])
-            for tt in ["Total", "Acc", "Bw"]:
-                s += f"{tt + ':':14}{statDisplay}".format(*statInfo[t + tt])
+            for tt, tts in statTypeTypes:
+                s += f"{tts + ':':14}{statDisplay}".format(*statInfo[t + tt])
             sections.append(s)
         sections.append(f"discord {member.discord} {idleStatus}")
         text = "\n".join(sections)
