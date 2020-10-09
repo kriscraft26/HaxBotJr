@@ -33,6 +33,11 @@ class CustomTermFormatter(logging.Formatter):
         super().__init__(fmt=f"%(asctime)s %(levelname)s {Style.RESET_ALL} %(message)s",
             datefmt="%H:%M:%S")
 
+    def format(self, record):
+        s = super().format(record)
+        print(s, end="")
+        return ""
+
     def formatTime(self, record, datefmt):
         s = super().formatTime(record, datefmt)
         levelColor = COLORS[record.levelno]
