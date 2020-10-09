@@ -11,10 +11,11 @@ class CatchableArgumentParser(ArgumentParser):
             raise Exception(message)
 
 """
-"arg"       positional argument
-["arg"]     flag argument
-"arg..."    extend argument
-"-arg"      store argument
+"arg"                       positional argument
+["arg"]                     flag argument
+"arg..."                    extend argument
+"-arg"                      store argument
+["arg", ("choice", ...)]    choice argument
 """
 def parser(name, *args, isGroup=False, parent=None):
     argParser = CatchableArgumentParser(prog=f"]{name}", add_help=False)
@@ -25,15 +26,23 @@ def parser(name, *args, isGroup=False, parent=None):
             if arg.endswith("..."):
                 arg = arg[:-3]
                 argParser.add_argument(dest=arg, action="extend", nargs="+", type=str)
+            #  "-arg"
             elif arg[0] == "-":
                 arg = arg[1:]
                 argParser.add_argument(f"-{arg[0]}", f"--{arg}", action="store", dest=arg)
+            #  "arg"
             else:
                 argParser.add_argument(dest=arg)
-        #  ["arg"]
         elif argType == list:
-            arg = arg[0]
-            argParser.add_argument(f"-{arg[0]}", f"--{arg}", action="store_true", dest=arg)
+            #  ["arg"]
+            if len(arg) == 1:
+                arg = arg[0]
+                argParser.add_argument(
+                    f"-{arg[0]}", f"--{arg}", action="store_true", dest=arg)
+            #  ["arg", ("choice", ...)]
+            elif len(arg) == 2:
+                [arg, choices] = arg
+                argParser.add_argument(arg, choices=choices)
     def wrapper(func):
         p = parent if parent else commands
         funcName = name.split(" ")[-1]
