@@ -3,6 +3,7 @@ import os
 import gzip
 from colorama import *
 from queue import Queue
+from sys import stdout
 
 from util.pickleutil import PickleUtil
 from util.timeutil import now
@@ -24,37 +25,40 @@ COLORS = {
     logging.ERROR: Back.RED,
     logging.CRITICAL: Back.RED
 }
-TERM_FMT = f"{Style.BRIGHT}{Back.WHITE}{Fore.BLACK} %s {Fore.LIGHTWHITE_EX}%s %s \
-{Style.RESET_ALL} %s"
 
 
-class CustomFileHandler(logging.FileHandler):
+class CustomTermFormatter(logging.Formatter):
 
-    def handle(self, record: logging.LogRecord):
+    def __init__(self):
+        super().__init__(fmt=f"%(asctime)s %(levelname)s {Style.RESET_ALL} %(message)s",
+            datefmt="%H:%M:%S")
+
+    def formatTime(self, record, datefmt):
+        s = super().formatTime(record, datefmt)
         levelColor = COLORS[record.levelno]
-        timeStr = now().strftime("%H:%M:%S")
-        print(TERM_FMT % (timeStr, levelColor, record.levelname, record.message))
-        return super().handle(record)
+        return f"{Style.BRIGHT}{Back.WHITE}{Fore.BLACK} {s} {Fore.LIGHTWHITE_EX}{levelColor}"
 
 
 formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s] [%(name)s]: %(message)s", 
     datefmt="%H:%M:%S")
 
-infoHandler = CustomFileHandler(filename=LOG_FILE, mode="w", encoding="utf-8")
+infoHandler = logging.FileHandler(filename=LOG_FILE, mode="w", encoding="utf-8")
 infoHandler.setFormatter(formatter)
-infoHandler.createLock()
+infoHandler.setLevel(logging.INFO)
 
 debugHandler = logging.FileHandler(filename=DEBUG_FILE, mode="w", encoding="utf-8")
 debugHandler.setFormatter(formatter)
-debugHandler.createLock()
+debugHandler.setLevel(logging.DEBUG)
+
+termHandler = logging.StreamHandler(stream=stdout)
+termHandler.setFormatter(CustomTermFormatter())
+termHandler.setLevel(logging.INFO)
 
 discordLogger = logging.getLogger("discord")
 discordLogger.setLevel(logging.INFO)
 discordLogger.addHandler(infoHandler)
 discordLogger.addHandler(debugHandler)
-
-
-discordLogPipe = Queue()
+discordLogger.addHandler(termHandler)
 
 
 class LoggerPair:
@@ -69,6 +73,7 @@ class LoggerPair:
     def _add_handler(self):
         self._infoLogger.addHandler(infoHandler)
         self._infoLogger.addHandler(debugHandler)
+        self._infoLogger.addHandler(termHandler)
 
         self._debugLogger.addHandler(debugHandler)
 
