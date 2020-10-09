@@ -43,8 +43,8 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataManager.load(XPTracker(self)))
         self.add_cog(DataManager.load(WarTracker(self)))
         self.add_cog(DataManager.load(EmeraldTracker(self)))
-        self.add_cog(DateClock(self))
         self.add_cog(RemoteDebugger(self))
+        self.add_cog(DateClock(self))
         self.add_cog(DataManager())
 
     @classmethod
