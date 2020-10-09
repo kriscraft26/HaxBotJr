@@ -33,7 +33,7 @@ class CustomFileHandler(logging.FileHandler):
     def handle(self, record: logging.LogRecord):
         levelColor = COLORS[record.levelno]
         timeStr = now().strftime("%H:%M:%S")
-        print(TERM_FMT % (timeStr, levelColor, record.levelname, record.msg))
+        print(TERM_FMT % (timeStr, levelColor, record.levelname, record.message))
         return super().handle(record)
 
 
