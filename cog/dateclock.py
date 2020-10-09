@@ -54,7 +54,7 @@ class DateClock(commands.Cog):
     def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
         self._snapshotManager.save_snapshot()
-        LeaderBoard.update_all_bw_base()
+        LeaderBoard.reset_all_bw()
 
     def _update_loop_interval(self):
         now = timeutil.now()

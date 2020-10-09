@@ -67,6 +67,7 @@ class MemberManager(commands.Cog):
     def __loaded__(self):
         self._ig_members_update.start()
         self._member_deletion.start()
+        LeaderBoard.init_lb(self.members.keys())
     
     def __snap__(self):
         return {
@@ -142,12 +143,20 @@ class MemberManager(commands.Cog):
             Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
             member.discord = str(after)
     
+    def _mark_idle(self, id_):
+        self.idleMembers.add(id_)
+        Logger.bot.info(f"{self.members[id_].ign} status set to idle")
+    
+    def _un_mark_idle(self, id_):
+        self.idleMembers.remove(id_)
+        Logger.bot.info(f"{self.members[id_].ign} status set to active")
+
     def _update_guild_info(self, gMember: GuildMember, dMember: Member):
         currRank, vRank = self._config.get_rank(dMember)
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
             gMember.rank = currRank
-            LeaderBoard.update_all_rank_base(gMember.id)
+            LeaderBoard.reset_all_acc(gMember.id)
         if gMember.vRank != vRank:
             Logger.guild.info(f"{gMember.ign} vRank change {gMember.vRank} -> {vRank}")
             gMember.vRank = vRank
@@ -158,6 +167,10 @@ class MemberManager(commands.Cog):
             del self.ignIdMap[gMember.ign]
             self.ignIdMap[currIgn] = gMember.id
             gMember.ign = currIgn
+            if currIgn in self._igMembers and currIgn in self.idleMembers:
+                self._un_mark_idle(gMember.id)
+            elif currIgn not in self._igMembers and currIgn not in self.idleMembers:
+                self._mark_idle(gMember.id)
         
         gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
@@ -175,8 +188,7 @@ class MemberManager(commands.Cog):
 
             ign = dMember.nick.split(" ")[-1]
             if ign not in self._igMembers:
-                self.idleMembers.add(id_)
-                Logger.bot.info(f"{ign} status set to idle")
+                self._mark_idle(id_)
         
         removed = prevGuildMemberIds.difference(currGuildMemberIds)
         for id_ in removed:
@@ -190,11 +202,9 @@ class MemberManager(commands.Cog):
 
             ign = dMember.nick.split(" ")[-1]
             if ign in self._igMembers and id_ in self.idleMembers:
-                self.idleMembers.remove(id_)
-                Logger.bot.info(f"{ign} status set to active")
+                self._un_mark_idle(id_)
             elif ign not in self._igMembers and id_ not in self.idleMembers:
-                self.idleMembers.add(id_)
-                Logger.bot.info(f"{ign} status set to idle")
+                self._mark_idle(id_)
     
     def _add_member(self, dMember: Member):
         id_ = dMember.id
@@ -207,15 +217,14 @@ class MemberManager(commands.Cog):
                 self._deletionQueue.remove(id_)
 
             LeaderBoard.force_add_entry(id_, statsInfo)
-
-        gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
+        else:
+            gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
         
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
 
         if gMember.ign not in self._igMembers:
-            self.idleMembers.add(id_)
-            Logger.bot.info(f"{gMember.ign} status set to idle")
+            self._mark_idle(id_)
         
         return gMember
     
@@ -247,23 +256,19 @@ class MemberManager(commands.Cog):
         maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values()))
 
         separator = "-" * (21 + maxStatLen + maxRankLen) + "\n"
+        headDisplay = "{0:->%d}\n" % (maxStatLen + maxRankLen + 4)
         statDisplay = "{0:%d,} (#{1})\n" % maxStatLen
         idleStatus = "-- NOT IN GUILD" if member.id in self.idleMembers else ""
 
-        text = ""
-        text += f"Total XP:          {statDisplay}".format(*statInfo["xp"])
-        text += f"Accumulated XP:    {statDisplay}".format(*statInfo["xpAcc"])
-        text += f"Bi-Weekly XP:      {statDisplay}".format(*statInfo["xpBw"])
-        text += separator
-        text += f"Total Em:          {statDisplay}".format(*statInfo["emerald"])
-        text += f"Accumulated Em     {statDisplay}".format(*statInfo["emeraldAcc"])
-        text += f"Bi-Weekly Em       {statDisplay}".format(*statInfo["emeraldBw"])
-        text += separator
-        text += f"Total Wars:        {statDisplay}".format(*statInfo["warCount"])
-        text += f"Accumulated Wars:  {statDisplay}".format(*statInfo["warCountAcc"])
-        text += f"Bi-Weekly Wars:    {statDisplay}".format(*statInfo["warCountBw"])
-        text += "\n"
-        text += f"discord {member.discord} {idleStatus}"
+        sections = []
+        for t in ["xp", "emerald", "warCount"]:
+            s = ""
+            s += f"{t:-<14}{headDisplay}".format(statInfo[t][0])
+            for tt in ["Total", "Acc", "Bw"]:
+                s += f"{tt + ':':14}{statDisplay}".format(*statInfo[t + tt])
+            sections.append(s)
+        sections.append(f"discord {member.discord} {idleStatus}")
+        text = "\n".join(sections)
 
         vRank = f"<{member.vRank}> " if member.vRank else ""
         title = f"[{member.rank}] {vRank}{member.ign}"

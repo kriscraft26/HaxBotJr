@@ -29,6 +29,7 @@ class XPTracker(commands.Cog):
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
         self._lastLoggedVal = {}
+        self._prevXp = {}
 
         self._update.start()
         self._xp_log.start()
@@ -49,8 +50,12 @@ class XPTracker(commands.Cog):
         for memberData in guildStats["members"]:
             if memberData["name"] in trackedIgns:
                 id_ = self._memberManager.ignIdMap[ memberData["name"]]
-                newTXp = memberData["contributed"]
-                self._lb.set_stat(id_, newTXp)
+                prevXp = self._prevXp.get(id_, -1)
+                currXp = self._lb.get_stat(id_)
+                newXp = memberData["contributed"]
+                if prevXp != newXp:
+                    self._lb.set_stat(id_, newXp)
+                self._prevXp[id_] = currXp
     
     @_update.before_loop
     async def _before_update(self):
@@ -66,11 +71,11 @@ class XPTracker(commands.Cog):
                 continue
 
             dxp = stat - prev
-            if stat == prev:
+            if not dxp:
                 continue
             text = "  |  ".join([
                 f"**{self._memberManager.members[id_].ign}** (+{dxp:,})",
-                f"__Total__ -> {stat:,}",
+                f"__Total__ -> {self._lb.get_total(id_):,}",
                 f"__Acc__ -> {self._lb.get_acc(id_):,}",
                 f"__BW__ -> {self._lb.get_bw(id_):,}"])
             await self._config.send("xpLog", text)
@@ -80,16 +85,16 @@ class XPTracker(commands.Cog):
     async def _before_xp_log(self):
         Logger.bot.debug("Starting xp logging loop")
     
-    @parser("xp", ["acc"], ["bw"], "-snap", isGroup=True)
-    async def display_xp_lb(self, ctx: commands.Context, acc, bw, snap):
+    @parser("xp", ["acc"], ["total"], "-snap", isGroup=True)
+    async def display_xp_lb(self, ctx: commands.Context, acc, total, snap):
         if snap:
             snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
                 "XPTracker")
             if not snapshot:
                 return
-            pages = snapshot[acc][bw]
+            pages = snapshot[acc][total]
         else:
-            pages = self._lb.create_pages(acc, bw,
+            pages = self._lb.create_pages(acc, total,
                 title="XP Leader Board", api=self._guildStatsTracker)
         
         await PagedMessage(pages, ctx.channel).init()
@@ -98,9 +103,6 @@ class XPTracker(commands.Cog):
     async def fix_xp(self, ctx: commands.Context):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
-        ids = [230399879803830272, 527579911356022795]
-        for id_ in ids:
-            self._lb._bwBase[id_] *= -1
-            self._lb._rank_bw(id_)
-            self._lb._rankBase[id_] *= -1
-            self._lb._rank_acc(id_)
+        id_ = self._memberManager.ignIdMap["Pandamonium"]
+        self._lb._total[id_] = self._lb.get_total(id_) + 2837801071
+        self._lb._rank(id_, self._lb._totalLb, self._lb.get_total)

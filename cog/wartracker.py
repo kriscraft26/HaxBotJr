@@ -92,16 +92,16 @@ class WarTracker(commands.Cog):
     async def _before_update(self):
         Logger.bot.debug("Starting war tracking loop")
 
-    @parser("wc", ["acc"], ["bw"], "-snap")
-    async def display_war_count_lb(self, ctx: commands.Context, acc, bw, snap):
+    @parser("wc", ["acc"], ["total"], "-snap")
+    async def display_war_count_lb(self, ctx: commands.Context, acc, total, snap):
         if snap:
             snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
                 "WarTracker")
             if not snapshot:
                 return
-            pages = snapshot[acc][bw]
+            pages = snapshot[acc][total]
         else:
-            pages = self._lb.create_pages(acc, bw,
+            pages = self._lb.create_pages(acc, total,
                 title="War Count Leader Board", api=self._serverListTracker)
 
         await PagedMessage(pages, ctx.channel).init()

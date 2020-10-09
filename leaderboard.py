@@ -5,7 +5,7 @@ from msgmaker import make_entry_pages, make_stat_entries
 from cog.datamanager import DataManager
 
 
-@DataManager.register("_bwBase", "_rankBase", "_stats", "_statLb", "_accLb", "_bwLb",
+@DataManager.register("_stats", "_acc", "_bw", "_total", "_totalLb", "_accLb", "_bwLb",
                       idFunc=lambda lb: lb.name)
 class LeaderBoard:
 
@@ -16,11 +16,12 @@ class LeaderBoard:
         self.name = name
         self._logger: LoggerPair = logger
 
-        self._bwBase = {}
-        self._rankBase = {}
         self._stats = {}
+        self._acc = {}
+        self._bw = {}
+        self._total = {}
 
-        self._statLb = []
+        self._totalLb = []
         self._accLb = []
         self._bwLb = []
 
@@ -39,9 +40,10 @@ class LeaderBoard:
         entry = {}
         for lb in cls._instances.values():
             name = lb.name
-            entry[name] = (lb.get_stat(id_), lb.get_stat_rank(id_))
+            entry[name] = (lb.get_stat(id_), 0)
             entry[f"{name}Acc"] = (lb.get_acc(id_), lb.get_acc_rank(id_))
             entry[f"{name}Bw"] = (lb.get_bw(id_), lb.get_bw_rank(id_))
+            entry[f"{name}Total"] = (lb.get_total(id_), lb.get_total_rank(id_))
         return entry
     
     @classmethod
@@ -57,24 +59,34 @@ class LeaderBoard:
             stat = entry[name][0]
             acc = entry[name + "Acc"][0]
             bw = entry[name + "Bw"][0]
+            total = entry[name + "Total"][0]
 
             lb._stats[id_] = stat
-            lb._rankBase[id_] = stat - acc
-            lb._bwBase[id_] = stat - bw
+            if acc:
+                lb._acc[id_] = acc
+            if bw:
+                lb._bw[id_] = bw
+            if total:
+                lb._total[id_] = total
 
-            lb._rank_stat(id_)
-            lb._rank_acc(id_)
-            lb._rank_bw(id_)
+            lb._update_lb(id_)
     
     @classmethod
-    def update_all_bw_base(cls):
+    def reset_all_bw(cls):
         for lb in cls._instances.values():
-            lb.update_bw_base()
+            lb.reset_bw()
     
     @classmethod
-    def update_all_rank_base(cls, id_: int):
+    def reset_all_acc(cls, id_: int):
         for lb in cls._instances.values():
-            lb.update_rank_base(id_)
+            lb.reset_acc(id_)
+
+    @classmethod
+    def init_lb(cls, idSet):
+        for lb in cls._instances.values():
+            lb._totalLb = sorted(idSet, key=lambda id_: -lb.get_total(id_))
+            lb._accLb = sorted(idSet, key=lambda id_: -lb.get_acc(id_))
+            lb._bwLb = sorted(idSet, key=lambda id_: -lb.get_bw(id_))
 
     @classmethod
     def _get_ign(cls, id_: int):
@@ -82,68 +94,79 @@ class LeaderBoard:
     
     def set_stat(self, id_: int, val: int):
         prev = self.get_stat(id_)
-        if prev != val:
-            ign = LeaderBoard._get_ign(id_)
+        diff = val - prev
+        ign = LeaderBoard._get_ign(id_)
+
+        if id_ not in self._stats:
+            if diff:
+                self._logger.info(f"{ign} {self.name} -> {val}")
+                self._stats[id_] = val
+            self._update_lb(id_)
+            return
+
+        if diff > 0:
+            self._acc[id_] = self.get_acc(id_) + diff
+            self._bw[id_] = self.get_bw(id_) + diff
+            self._total[id_] = self.get_total(id_) + diff
+            self._update_lb(id_)
+        
+        if diff:
             self._logger.info(f"{ign} {self.name} {self.get_stat(id_)} -> {val}")
 
             self._stats[id_] = val
-            if id_ not in self._rankBase:
-                self._rankBase[id_] = val
-                self._bwBase[id_] = val
 
-            self._rank_stat(id_)
-            self._rank_acc(id_)
-            self._rank_bw(id_)
-        return val - prev
+        return diff
     
     def remove_id(self, id_: int):
         if id_ in self._stats:
             del self._stats[id_]
-            del self._rankBase[id_]
-            del self._bwBase[id_]
+            self._acc.pop(id_, 0)
+            self._bw.pop(id_, 0)
+            self._total.pop(id_, 0)
 
-            self._statLb.remove(id_)
             self._accLb.remove(id_)
             self._bwLb.remove(id_)
+            self._totalLb.remove(id_)
     
-    def update_rank_base(self, id_: int):
-        self._rankBase[id_] = self.get_stat(id_)
+    def reset_acc(self, id_: int):
+        self._acc.pop(id_, 0)
     
-    def update_bw_base(self):
-        self._bwBase = self._stats.copy()
+    def reset_bw(self):
+        self._bw = {}
 
     def get_stat(self, id_: int):
-        return self._stats.get(id_, 0)
+        return self._get_val(id_, self._stats)
     
-    def get_stat_rank(self, id_: int):
-        if id_ not in self._statLb:
-            return 0
-        return self._statLb.index(id_) + 1
+    def get_total(self, id_: int):
+        return self._get_val(id_, self._total)
+    
+    def get_total_rank(self, id_: int):
+        return self._get_rank(id_, self._totalLb)
     
     def get_acc(self, id_: int):
-        return self.get_stat(id_) - self._rankBase.get(id_, 0)
+        return self._get_val(id_, self._acc)
     
     def get_acc_rank(self, id_: int):
-        if id_ not in self._accLb:
-            return 0
-        return self._accLb.index(id_) + 1
+        return self._get_rank(id_, self._accLb)
     
     def get_bw(self, id_: int):
-        return self.get_stat(id_) - self._bwBase.get(id_, 0)
+        return self._get_val(id_, self._bw)
     
     def get_bw_rank(self, id_: int):
-        if id_ not in self._bwLb:
+        return self._get_rank(id_, self._bwLb)
+    
+    def _get_val(self, id_: int, valMap):
+        return valMap.get(id_, 0)
+    
+    def _get_rank(self, id_: int, lb):
+        if id_ not in lb:
             return 0
-        return self._bwLb.index(id_) + 1
+        return lb.index(id_) + 1
     
-    def _rank_stat(self, id_: int):
-        self._rank(id_, self._statLb, self.get_stat)
-    
-    def _rank_acc(self, id_: int):
+    def _update_lb(self, id_: int):
         self._rank(id_, self._accLb, self.get_acc)
-    
-    def _rank_bw(self, id_: int):
         self._rank(id_, self._bwLb, self.get_bw)
+        self._rank(id_, self._totalLb, self.get_total)
     
     def _rank(self, id_: int, lb: List[int], key):
         if id_ in lb:
@@ -189,19 +212,19 @@ class LeaderBoard:
         for id_ in self._stats:
             self._rank(id_, lb, key)
     
-    def create_pages(self, acc: bool, bw: bool, **decoArgs) -> List[str]:
+    def create_pages(self, acc: bool, total: bool, **decoArgs) -> List[str]:
         if acc:
             lb = self._accLb
             ss = self.get_acc
             header = "Accumulated "
-        elif bw:
+        elif total:
+            lb = self._totalLb
+            ss = self.get_total
+            header = "Total "
+        else:
             lb = self._bwLb
             ss = self.get_bw
             header = "Bi-Weekly "
-        else:
-            lb = self._statLb
-            ss = self.get_stat
-            header = ""
         
         igns = LeaderBoard._memberManager.get_igns_set()
         members = LeaderBoard._memberManager.members

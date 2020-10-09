@@ -92,10 +92,10 @@ class SnapshotManager(commands.Cog):
         return result
     
     def make_lb_snapshot(self, lb, **decoArgs):
-        pagesTotal = lb.create_pages(False, False, **decoArgs)
+        pagesBw = lb.create_pages(False, False, **decoArgs)
         pagesAcc = lb.create_pages(True, False, **decoArgs)
-        pagesBw = lb.create_pages(False, True, **decoArgs)
-        return [[pagesTotal, pagesBw], [pagesAcc, pagesAcc]]
+        pagesTotal = lb.create_pages(False, True, **decoArgs)
+        return [[pagesBw, pagesTotal], [pagesAcc, pagesAcc]]
     
     @parser("snap", isGroup=True)
     async def display_snapshots(self, ctx: commands.Context):

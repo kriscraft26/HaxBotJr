@@ -26,7 +26,7 @@ class ReactableMessage:
             await self.msg.add_reaction(reaction)
     
     async def remove_callback(self, reaction):
-        self._reactions.pop(reaction)
+        self._reactions.pop(reaction, 0)
         if self.msg:
             await self.msg.remove_reaction(reaction, self.msg.author)
     
