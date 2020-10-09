@@ -10,6 +10,7 @@ from util.cmdutil import parser
 import util.timeutil as timeutil
 from cog.remotedebugger import RemoteDebugger
 from cog.snapshotmanager import SnapshotManager
+from cog.configuration import Configuration
 
 
 class DateClock(commands.Cog):
@@ -24,6 +25,7 @@ class DateClock(commands.Cog):
 
         self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
+        self._config: Configuration = bot.get_cog("Configuration")
 
         self._update_loop_interval()
         self._daily_loop.start()
@@ -35,18 +37,21 @@ class DateClock(commands.Cog):
             return
         Logger.bot.debug(f"start daily loop {timeutil.now()} with bwIndex {self.bwIndex}")
         
-        archiveNames = Logger.reset()
-        self._remoteDebugger.add_archives(*archiveNames)
+        self._daily_callback()
 
         self.bwIndex += 1
         if self.bwIndex > 14:
             self.bwIndex = 1
-            self._on_bi_week_transition()
+            self._bw_callback()
         Logger.bot.info(f"bwIndex -> {self.bwIndex}")
 
         self._update_loop_interval()
     
-    def _on_bi_week_transition(self):
+    def _daily_callback(self):
+        archiveNames = Logger.reset()
+        self._remoteDebugger.add_archives(*archiveNames)
+
+    def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
         self._snapshotManager.save_snapshot()
         LeaderBoard.update_all_bw_base()
@@ -65,3 +70,11 @@ class DateClock(commands.Cog):
         time = timeutil.now().strftime("%b %d, %H:%M:%S (UTC)")
         text = f"{time}\nday {self.bwIndex} of current bi-week"
         await ctx.send(decorate_text(text))
+    
+    @parser("trigger", ["cbType", ("daily", "biweekly")])
+    async def trigger_callback(self, ctx: commands.Context, cbType):
+        if not await self._config.perm_check(ctx, "user.dev"):
+            return
+        func = self._daily_callback if cbType == "daily" else self._bw_callback
+        await ctx.message.add_reaction("✅")
+        func()
