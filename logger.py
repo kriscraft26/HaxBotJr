@@ -27,14 +27,21 @@ COLORS = {
 }
 
 
+statusLog = {"WARNING": set(), "ERROR": 0, "CRITICAL": 0}
+
+
 class CustomTermFormatter(logging.Formatter):
 
     def __init__(self):
         super().__init__(fmt=f"%(asctime)s %(levelname)s {Style.RESET_ALL} %(message)s",
             datefmt="%H:%M:%S")
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord):
         s = super().format(record)
+        if record.levelno == logging.WARNING:
+            statusLog["WARNING"].add(record.message)
+        elif record.levelno != logging.INFO:
+            statusLog[record.levelname] += 1
         print(s, end="")
         return ""
 
