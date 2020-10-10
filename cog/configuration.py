@@ -188,4 +188,17 @@ class Configuration(commands.Cog):
 
         cb = lambda m: self._set(field, self._config[field].union({user}))
         await ConfirmMessage(ctx, text, successText, cb).init()
-        
+    
+    @parser("config resetChannel", ["channelType", ("xpLog", "bwReport")], 
+        parent=display_config)
+    async def reset_channel(self, ctx: commands.Context, channelType):
+        channel = self._channels[channelType]
+        if not channel:
+            text = f"There are no channel set as {channelType} channel"
+            await ctx.send(embed=make_alert(text, color=COLOR_INFO))
+            return
+        text = f"Are you sure to reset {channelType} channel? (currently #{channel.name})"
+        successText = f"Successfully reset {channelType} channel."
+
+        cb = lambda m: self._set(f"channel.{channelType}", None)
+        await ConfirmMessage(ctx, text, successText, cb).init()
