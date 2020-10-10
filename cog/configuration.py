@@ -164,7 +164,7 @@ class Configuration(commands.Cog):
         text = f"Are you sure to set {channelName} as {channelType} channel?"
         successText = f"Successfully set {channelName} as {channelType} channel."
 
-        cb = lambda m: self._set(f"channel.{channelType}", m.channel.id)
+        cb = lambda m: self._set(f"channel.{channelType}", channel.id)
         await ConfirmMessage(ctx, text, successText, cb).init()
     
     @parser("config addUser", "user", ["userType", ("dev", "ignore")],
