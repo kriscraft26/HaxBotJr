@@ -1,7 +1,9 @@
 from typing import List, Dict, Tuple
+from datetime import timedelta
 
 from logger import LoggerPair, Logger
-from msgmaker import make_entry_pages, make_stat_entries
+from msgmaker import make_entry_pages, make_stat_entries, decorate_text
+from util.timeutil import now, get_bw_range
 from cog.datamanager import DataManager
 
 
@@ -233,3 +235,28 @@ class LeaderBoard:
         
         return make_entry_pages(make_stat_entries(lb, igns, members, lambda m: ss(m.id)),
             **decoArgs)
+    
+    def create_bw_report(self):
+        maxIgnLen = max(map(len, LeaderBoard._memberManager.ignIdMap.keys())) + 1
+        template = f"%-{maxIgnLen}s {{0:,}}"
+
+        total = 0
+        sections = {"Cosmonaut": [], "Rocketeer": [], "Space Pilot": [], 
+                    "Engineer": [], "Cadet": [], "MoonWalker": []}
+        
+        for id_ in self._bwLb:
+            gMember = LeaderBoard._memberManager.members[id_]
+            val = self.get_bw(id_)
+            s = (template % (gMember.ign + ":")).format(val)
+            sections[gMember.rank].append(s)
+            total += val
+
+        lower, upper = get_bw_range(now().date() - timedelta(days=1))
+        
+        text = "Bi-Week of " + lower.strftime("%Y/%m/%d - ") + upper.strftime("%Y.%m.%d\n")
+        text += f"total: {total:,}"
+
+        for rank, entries in sections.items():
+            text += f"\n\n[{rank}]\n\n" + "\n".join(entries)
+        
+        return decorate_text(text)
