@@ -16,16 +16,10 @@ from cog.datamanager import DataManager
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
-        "user.dev": {"Pucaet#9528"},
-        "user.ignore": {"Kyoto#1414"},
-        "role.visual": {
-            "Top Gunner": {"Space Pilot", "Rocketeer"},
-            "Commander": {"Cosmonaut"},
-            "Commandress": {"Cosmonaut"}
-        },
-        "role.personal": {
-            "Princess": {"pontosaurus#6727"}
-        },
+        "user.dev": {},
+        "user.ignore": {},
+        "role.visual": {},
+        "role.personal": {},
         "channel.xpLog": None,
         "channel.bwReport": None
     }
