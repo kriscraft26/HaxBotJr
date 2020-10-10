@@ -8,7 +8,7 @@ from typing import List
 from discord import File, Message
 from discord.ext import commands
 
-from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE
+from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE, statusLog, Logger
 from msgmaker import *
 from reactablemessage import ListSelectionMessage, ReactableMessage
 from util.cmdutil import parser
@@ -88,5 +88,22 @@ class RemoteDebugger(commands.Cog):
         self.infoArchives.append(infoArchiveName)
         self.debugArchives.append(debugArchiveName)
     
+    @parser("debug status", parent=debug_root)
+    async def display_status(self, ctx: commands.Context):
+        Logger.bot.warning("test")
+        await ctx.send(decorate_text("  |  ".join([
+            "WARNING: %d" % len(statusLog["WARNING"]),
+            "ERROR: %d" % statusLog["ERROR"],
+            "CRITICAL: %d" % statusLog["CRITICAL"]
+        ])))
+    
+    @parser("debug warn", parent=debug_root)
+    async def display_warnings(self, ctx: commands.Context):
+        if not statusLog["WARNING"]:
+            await ctx.send("`Empty`")
+            return
+        await ctx.send(decorate_text("\n".join(statusLog["WARNING"])))
+        statusLog["WARNING"].clear()
+
     async def cog_check(self, ctx: commands.Context):
         return await self._config.perm_check(ctx, "user.dev")
