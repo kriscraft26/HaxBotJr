@@ -190,24 +190,43 @@ class Configuration(commands.Cog):
             text = "#" + channel.name if channel else "Not set"
             await ctx.send(embed=make_alert(text, title=title, color=COLOR_INFO))
     
-    @parser("config addUser", "user", ["userType", ("dev", "ignore")],
-        parent=display_config)
-    async def add_user(self, ctx: commands.Context, userType, user):
+    @parser("config user", ["type", ("dev", "ignore")], "-remove", "-add",
+        parent=display_config, type="type_")
+    async def config_user(self, ctx: commands.Context, type_, remove, add):
+        field = f"user.{type_}"
+        users = self._config[field]
+
+        if not remove and not add:
+            text = ", ".join(users) if users else "Empty"
+            await ctx.send(embed=make_alert(text, title=field, color=COLOR_INFO))
+            return
+        
         try:
+            user = remove or add
             gMember = self.bot.get_cog("MemberManager").members[int(user[3:-1])]
         except:
             await ctx.send(embed=make_alert("bad user input"))
             return
         user = gMember.discord
-        field = f"user.{userType}"
 
-        if user in self._config[field]:
-            text = f"{user} is already part of {userType} users."
-            await ctx.send(embed=make_alert(text, color=COLOR_INFO))
-            return
+        if remove:
+            if user not in users:
+                text = f"{user} is not part of {type_} users."
+                await ctx.send(embed=make_alert(text, color=COLOR_INFO))
+                return
+            
+            text = f"Are you sure to remove {user} from {type_} users?"
+            successText = f"Successfully removed {user} from {type_} users."
+            cb = lambda m: self._set(field, users.difference({user}))
+        else:
+            if user in users:
+                text = f"{user} is already part of {type_} users."
+                await ctx.send(embed=make_alert(text, color=COLOR_INFO))
+                return
 
-        text = f"Are you sure to add {user} to {userType} users?"
-        successText = f"Successfully add {user} to {userType} users."
+            text = f"Are you sure to add {user} to {type_} users?"
+            successText = f"Successfully added {user} to {type_} users."
 
-        cb = lambda m: self._set(field, self._config[field].union({user}))
+            cb = lambda m: self._set(field, users.union({user}))
+        
         await ConfirmMessage(ctx, text, successText, cb).init()
