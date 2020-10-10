@@ -1,5 +1,6 @@
 from inspect import iscoroutinefunction
 from typing import List
+from asyncio import sleep
 
 from discord import Message, TextChannel, Reaction
 from discord.ext.commands import Context
@@ -46,9 +47,10 @@ class ReactableMessage:
     
     async def un_track(self):
         if self.track:
-            for reaction in self._reactions:
-                await self.msg.remove_reaction(reaction, self.msg.author)
             ReactableMessage.activeMsg.remove(self)
+            for reaction in self._reactions:
+                await sleep(0.25)
+                await self.msg.remove_reaction(reaction, self.msg.author)
     
     async def edit_message(self, **editArgs):
         await self.msg.edit(**editArgs)
