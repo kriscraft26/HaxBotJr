@@ -90,7 +90,6 @@ class RemoteDebugger(commands.Cog):
     
     @parser("debug status", parent=debug_root)
     async def display_status(self, ctx: commands.Context):
-        Logger.bot.warning("test")
         await ctx.send(decorate_text("  |  ".join([
             "WARNING: %d" % len(statusLog["WARNING"]),
             "ERROR: %d" % statusLog["ERROR"],
