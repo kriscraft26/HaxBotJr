@@ -37,8 +37,8 @@ class Configuration(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self._config = Configuration.DEFAULT_CONFIG
         self._channels = {
-            "channel.xpLog": None,
-            "channel.bwReport": None,
+            "xpLog": None,
+            "bwReport": None,
         }
         
         self.guild: Guild = bot.guilds[0]
@@ -52,22 +52,25 @@ class Configuration(commands.Cog):
             del self._config[key]
         
         for key in self._channels:
-            if self._config[key]:
-                self._channels[key] = self.guild.get_channel(self._config[key])
+            channelId = self._config["channel." + key]
+            if channelId:
+                self._channels[key] = self.guild.get_channel(channelId)
 
-    def __call__(self, configName):
-        if configName in self._channels:
-            return self._channels[configName]
+    def __call__(self, configName: str):
+        if configName.startswith("channel."):
+            return self._channels[configName.split(".")[1]]
         return self._config[configName]
     
-    def _set(self, name, val):
+    def _set(self, name: str, val):
         Logger.bot.info(f"Config {name}: {self._config[name]} -> {val}")
         self._config[name] = val
-        if name in self._channels:
-            self._channels[name] = self.guild.get_channel(val) if val else None
+
+        configSub = name.split(".")[1]
+        if configSub in self._channels:
+            self._channels[configSub] = self.guild.get_channel(val) if val else None
     
     async def send(self, channelName, text, **kwargs):
-        channel = self._channels.get(f"channel.{channelName}", None)
+        channel = self._channels.get(channelName, None)
         if not channel:
             return
         await channel.send(text, **kwargs)
