@@ -38,6 +38,7 @@ class Configuration(commands.Cog):
         }
         
         self.guild: Guild = bot.guilds[0]
+        self.bot = bot
     
     def __loaded__(self):
         for key, val in Configuration.DEFAULT_CONFIG.items():
@@ -145,23 +146,46 @@ class Configuration(commands.Cog):
         pages = make_entry_pages(entries, maxEntries=5, title="Configuration")
         await PagedMessage(pages, ctx.channel).init()
     
-    def _make_set_channel_cb(self, channelName):
-        def cb(msg):
-            self._set(f"channel.{channelName}", msg.channel.id)
-        return cb
-    
-    @parser("config setChannel", ["channelType", ("xpLog", "bwReport")], 
+    @parser("config setChannel", "channel", ["channelType", ("xpLog", "bwReport")], 
         parent=display_config)
-    async def set_channel(self, ctx: commands.Context, channelType):
-        channel: TextChannel = ctx.channel
+    async def set_channel(self, ctx: commands.Context, channel, channelType):
+        try:
+            channel: TextChannel = self.guild.get_channel(int(channel[2:-1]))
+        except:
+            await ctx.send(embed=make_alert("bad channel input"))
+            return
         channelName = f"#{channel.name}"
+
         if self._config[f"channel.{channelType}"] == channel.id:
             text = f"{channelName} is already set as {channelType} channel."
-            subText = f"use `]config reset channel.{channelType}` to reset it."
-            await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_INFO))
+            await ctx.send(embed=make_alert(text, color=COLOR_INFO))
             return
-        text = f"Are you sure set {channelName} as {channelType} channel?"
+
+        text = f"Are you sure to set {channelName} as {channelType} channel?"
         successText = f"Successfully set {channelName} as {channelType} channel."
 
-        cb = self._make_set_channel_cb(channelType)
+        cb = lambda m: self._set(f"channel.{channelType}", m.channel.id)
         await ConfirmMessage(ctx, text, successText, cb).init()
+    
+    @parser("config addUser", "user", ["userType", ("dev", "ignore")],
+        parent=display_config)
+    async def add_user(self, ctx: commands.Context, userType, user):
+        try:
+            gMember = self.bot.get_cog("MemberManager").members[int(user[3:-1])]
+        except:
+            await ctx.send(embed=make_alert("bad user input"))
+            return
+        user = gMember.discord
+        field = f"user.{userType}"
+
+        if user in self._config[field]:
+            text = f"{user} is already part of {userType} users."
+            await ctx.send(embed=make_alert(text, color=COLOR_INFO))
+            return
+
+        text = f"Are you sure to add {user} to {userType} users?"
+        successText = f"Successfully add {user} to {userType} users."
+
+        cb = lambda m: self._set(field, self._config[field].union({user}))
+        await ConfirmMessage(ctx, text, successText, cb).init()
+        
