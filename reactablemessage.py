@@ -66,7 +66,8 @@ class ReactableMessage:
             reactionCount = reaction.count
             if targetMsg.id == msg.msg.id and reactionCount > 1:
                 if user.id != targetMsg.author.id:
-                    await targetMsg.remove_reaction(reaction, user)
+                    try:
+                        await targetMsg.remove_reaction(reaction, user)
                 if msg.userId and user.id != msg.userId:
                     return
                 if reaction.emoji in msg._reactions:
