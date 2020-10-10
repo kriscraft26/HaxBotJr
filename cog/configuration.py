@@ -16,10 +16,6 @@ from cog.datamanager import DataManager
 class Configuration(commands.Cog):
 
     DEFAULT_CONFIG = {
-        "group.guild": ["MoonWalker", "Cosmonaut", "Rocketeer", "Space Pilot", 
-                        "Engineer", "Cadet"],
-        "group.staff": ["Cosmonaut"],
-        "group.trusted": ["Cosmonaut", "Rocketeer"],
         "user.dev": {"Pucaet#9528"},
         "user.ignore": {"Kyoto#1414"},
         "role.visual": {
@@ -39,6 +35,12 @@ class Configuration(commands.Cog):
         self._channels = {
             "xpLog": None,
             "bwReport": None,
+        }
+        self._groups = {
+            "guild": ["MoonWalker", "Cosmonaut", "Rocketeer", "Space Pilot", 
+                      "Engineer", "Cadet"],
+            "staff": ["Cosmonaut"],
+            "trusted": ["Cosmonaut", "Rocketeer"]
         }
         
         self.guild: Guild = bot.guilds[0]
@@ -80,7 +82,7 @@ class Configuration(commands.Cog):
         if not rank:
             return False
         roleRank = rank[0]
-        return roleRank in self._config[f"group.{groupName}"]
+        return roleRank in self._groups[groupName]
     
     def is_of_user(self, userName: str, member: Member) -> bool:
         return str(member) in self._config[f"user.{userName}"]
@@ -94,7 +96,7 @@ class Configuration(commands.Cog):
             return None
 
         memberRoles = list(map(lambda r: r.name, member.roles))
-        roleRank = find(lambda r: r in memberRoles, self._config["group.guild"])
+        roleRank = find(lambda r: r in memberRoles, self._groups["guild"])
         if not roleRank:
             return None
 
@@ -129,9 +131,10 @@ class Configuration(commands.Cog):
         checker = self.is_of_group if type_ == "group" else self.is_of_user
         passed = checker(name, ctx.author)
         if not passed:
-            staffGroup = ", ".join(self._config[fieldName])
+            names = ", ".join(
+                self._config[fieldName] if type_ == "user" else self._groups[name])
             alert = make_alert("You have no permission to use this command",
-                subtext=f"only {staffGroup} can use it")
+                subtext=f"only {names} can use it")
             await ctx.send(embed=alert)
         return passed
 
