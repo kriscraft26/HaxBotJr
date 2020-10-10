@@ -37,23 +37,24 @@ class DateClock(commands.Cog):
             return
         Logger.bot.debug(f"start daily loop {timeutil.now()} with bwIndex {self.bwIndex}")
         
-        self._daily_callback()
+        await self._daily_callback()
 
         self.bwIndex += 1
         if self.bwIndex > 14:
             self.bwIndex = 1
-            self._bw_callback()
+            await self._bw_callback()
         Logger.bot.info(f"bwIndex -> {self.bwIndex}")
 
         self._update_loop_interval()
     
-    def _daily_callback(self):
+    async def _daily_callback(self):
         archiveNames = Logger.reset()
         self._remoteDebugger.add_archives(*archiveNames)
 
-    def _bw_callback(self):
+    async def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
         self._snapshotManager.save_snapshot()
+        await self._config.send("bwReport", LeaderBoard.get_lb("xp").create_bw_report())
         LeaderBoard.reset_all_bw()
 
     def _update_loop_interval(self):
@@ -71,10 +72,12 @@ class DateClock(commands.Cog):
         text = f"{time}\nday {self.bwIndex} of current bi-week"
         await ctx.send(decorate_text(text))
     
-    @parser("trigger", ["cbType", ("daily", "biweekly")])
+    @parser("trigger", ["cbType", ("daily", "biweekly", "bwReport")])
     async def trigger_callback(self, ctx: commands.Context, cbType):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
+        if cbType == "bwReport":
+            await self._config.send("bwReport", LeaderBoard.get_lb("xp").create_bw_report())
+            return
         func = self._daily_callback if cbType == "daily" else self._bw_callback
-        await ctx.message.add_reaction("✅")
-        func()
+        await func()
