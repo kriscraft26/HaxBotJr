@@ -104,16 +104,16 @@ class Configuration(commands.Cog):
         if nameRank in self._config["role.visual"]:
             if roleRank in self._config["role.visual"][nameRank]:
                 return (roleRank, nameRank)
-            print(f"{nick}: visual role mismatch")
+            Logger.bot.warning(f"{nick}: visual role mismatch")
             return None
         
         if nameRank in self._config["role.personal"]:
             if str(member) in self._config["role.personal"][nameRank]:
                 return (roleRank, nameRank)
-            print(f"{nick}: personal role mismatch")
+            Logger.bot.warning(f"{nick}: personal role mismatch")
             return None
         
-        print(f"{nick}: rank role mismatch")
+        Logger.bot.warning(f"{nick}: rank role mismatch")
         return None
     
     def get_all_guild_members(self) -> Set[Member]:
