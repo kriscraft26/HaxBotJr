@@ -6,7 +6,7 @@ from discord.utils import find
 from discord.ext import commands
 
 from logger import Logger
-from msgmaker import make_entry_pages, make_alert
+from msgmaker import *
 from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from cog.datamanager import DataManager
@@ -30,13 +30,15 @@ class Configuration(commands.Cog):
         "role.personal": {
             "Princess": {"pontosaurus#6727"}
         },
-        "channel.xpLog": None
+        "channel.xpLog": None,
+        "channel.bwReport": None
     }
 
     def __init__(self, bot: commands.Bot):
         self._config = Configuration.DEFAULT_CONFIG
         self._channels = {
-            "channel.xpLog": None
+            "channel.xpLog": None,
+            "channel.bwReport": None,
         }
         
         self.guild: Guild = bot.guilds[0]
@@ -143,21 +145,23 @@ class Configuration(commands.Cog):
         pages = make_entry_pages(entries, maxEntries=5, title="Configuration")
         await PagedMessage(pages, ctx.channel).init()
     
-    @parser("config trackXP", parent=display_config)
-    async def set_xp_channel(self, ctx: commands.Context):
-        channel: TextChannel = ctx.channel
-        if self._config["channel.xpLog"]:
-            text = f"Are you sure to disbale xp tracking in #{channel.name}?"
-            successText = f"Successfully disabled xp tracking in #{channel.name}."
-        else:
-            text = f"Are you sure to track xp in #{channel.name}?"
-            successText = f"Successfully set #{channel.name} as xp tracking channel."
-
-        await ConfirmMessage(ctx, text, successText, self.set_xp_channel_cb).init()
+    def _make_set_channel_cb(self, channelName):
+        def cb(msg):
+            self._set(f"channel.{channelName}", msg.channel.id)
+        return cb
     
-    async def set_xp_channel_cb(self, msg: ConfirmMessage):
-        channel: TextChannel = msg.channel
-        if self._config["channel.xpLog"]:
-            self._set("channel.xpLog", None)
-        else:
-            self._set("channel.xpLog", channel.id)
+    @parser("config setChannel", ["channelType", ("xpLog", "bwReport")], 
+        parent=display_config)
+    async def set_channel(self, ctx: commands.Context, channelType):
+        channel: TextChannel = ctx.channel
+        channelName = f"#{channel.name}"
+        if self._config[f"channel.{channelType}"] == channel.id:
+            text = f"{channelName} is already set as {channelType} channel."
+            subText = f"use `]config reset channel.{channelType}` to reset it."
+            await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_INFO))
+            return
+        text = f"Are you sure set {channelName} as {channelType} channel?"
+        successText = f"Successfully set {channelName} as {channelType} channel."
+
+        cb = self._make_set_channel_cb(channelType)
+        await ConfirmMessage(ctx, text, successText, cb).init()
