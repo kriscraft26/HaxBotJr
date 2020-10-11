@@ -221,27 +221,23 @@ class Configuration(commands.Cog):
             text = ", ".join(users) if users else "Empty"
             await ctx.send(embed=make_alert(text, title=field, color=COLOR_INFO))
             return
-        
-        user = self.parse_user(remove or add)
-        if not user:
-            await ctx.send(embed=make_alert("bad user input"))
-            return
-        members = self.bot.get_cog("MemberManager").members
-        if user.id not in members:
-            await ctx.send(embed=make_alert("not a guild member"))
-            return
-        user = members[user.id].discord
 
         if remove:
-            if user not in users:
-                text = f"{user} is not part of {type_} users."
+            if remove not in users:
+                text = f"{remove} is not part of {type_} users."
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
             
-            text = f"Are you sure to remove {user} from {type_} users?"
-            successText = f"Successfully removed {user} from {type_} users."
-            cb = lambda m: self._set(field, users.difference({user}))
+            text = f"Are you sure to remove {remove} from {type_} users?"
+            successText = f"Successfully removed {remove} from {type_} users."
+            cb = lambda m: self._set(field, users.difference({remove}))
         else:
+            user = self.parse_user(remove or add)
+            if not user:
+                await ctx.send(embed=make_alert("bad user input"))
+                return
+            user = str(user)
+
             if user in users:
                 text = f"{user} is already part of {type_} users."
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
@@ -253,3 +249,26 @@ class Configuration(commands.Cog):
             cb = lambda m: self._set(field, users.union({user}))
         
         await ConfirmMessage(ctx, text, successText, cb).init()
+
+    @parser("config role", ["type", ("visual", "personal")], "-remove", "-add",
+        parent=display_config, type="type_")
+    async def config_roles(self, ctx: commands.Context, type_, remove, add):
+        field = f"role.{type_}"
+        roleMap: dict = self._config[field]
+
+        if not remove and not add:
+            embed: Embed = make_alert("", title=field, color=COLOR_INFO)
+            for key, val in roleMap.items():
+                embed.add_field(name=key, value=", ".join(val), inline=False)
+            await ctx.send(embed=embed)
+            return
+        
+        try:
+            role = self.guild.get_role(int((remove or add)[3:-1])).name
+        except:
+            await ctx.send(embed=make_alert("bad role input"))
+            return
+        
+        if remove:
+            if role not in roleMap:
+                pass
