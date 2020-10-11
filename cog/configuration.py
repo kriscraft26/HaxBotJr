@@ -222,13 +222,15 @@ class Configuration(commands.Cog):
             await ctx.send(embed=make_alert(text, title=field, color=COLOR_INFO))
             return
         
-        try:
-            user = remove or add
-            gMember = self.bot.get_cog("MemberManager").members[int(user[3:-1])]
-        except:
+        user = self.parse_user(remove or add)
+        if not user:
             await ctx.send(embed=make_alert("bad user input"))
             return
-        user = gMember.discord
+        members = self.bot.get_cog("MemberManager").members
+        if user.id not in members:
+            await ctx.send(embed=make_alert("not a guild member"))
+            return
+        user = members[user.id].discord
 
         if remove:
             if user not in users:
