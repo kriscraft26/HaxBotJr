@@ -1,7 +1,8 @@
 from typing import Set, Union, Tuple
 from os import getenv
+from re import match
 
-from discord import Member, Guild, TextChannel, Message
+from discord import Member, Guild, TextChannel, Message, Embed
 from discord.utils import find
 from discord.ext import commands
 
@@ -147,9 +148,8 @@ class Configuration(commands.Cog):
         await PagedMessage(pages, ctx.channel).init()
     
     async def _set_channel(self, ctx: commands.Context, channel, channelType):
-        try:
-            channel: TextChannel = self.guild.get_channel(int(channel[2:-1]))
-        except:
+        channel: TextChannel = self.parse_channel(channel)
+        if not channel:
             await ctx.send(embed=make_alert("bad channel input"))
             return
         channelName = f"#{channel.name}"
@@ -177,6 +177,27 @@ class Configuration(commands.Cog):
         cb = lambda m: self._set(f"channel.{channelType}", None)
         await ConfirmMessage(ctx, text, successText, cb).init()
     
+    def parse_channel(self, target: str):
+        m = match("<#([0-9]+)>", target)
+        if m:
+            return self.guild.get_channel(int(m.groups()[0]))
+        else:
+            return find(lambda c: c.name == target, self.guild.channels)
+    
+    def parse_role(self, target: str):
+        m = match("<@&([0-9]+)>", target)
+        if m:
+            return self.guild.get_role(int(m.groups()[0]))
+        else:
+            return find(lambda r: r.name == target, self.guild.roles)
+    
+    def parse_user(self, target: str):
+        m = match("<@!([0-9]+)>", target)
+        if m:
+            return self.guild.get_member(int(m.groups()[0]))
+        else:
+            return self.guild.get_member_named(target)
+
     @parser("config channel", ["type", ("xpLog", "bwReport")], ["reset"], "-set",
         parent=display_config, type="type_", set="set_")
     async def config_channel(self, ctx: commands.Context, type_, reset, set_):
