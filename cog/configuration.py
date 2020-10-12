@@ -104,14 +104,14 @@ class Configuration(commands.Cog):
         if roleRank.name == nameRank:
             return (roleRank.name, None)
         
-        if nameRank.name in self._config["role.visual"]:
-            if roleRank.id in self._config["role.visual"][nameRank.name]:
+        if nameRank in self._config["role.visual"]:
+            if roleRank.id in self._config["role.visual"][nameRank]:
                 return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: visual role mismatch")
             return None
         
-        if nameRank.name in self._config["role.personal"]:
-            if member.id in self._config["role.personal"][nameRank.name]:
+        if nameRank in self._config["role.personal"]:
+            if member.id in self._config["role.personal"][nameRank]:
                 return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: personal role mismatch")
             return None
