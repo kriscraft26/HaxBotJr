@@ -178,8 +178,8 @@ class Configuration(commands.Cog):
             Logger.bot.info(logMsg)
         return callback
 
-    @parser("config channel", ["type", ("xpLog", "bwReport")], ["reset"], "-set",
-        parent=display_config, type="type_", set="set_")
+    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog")], 
+        ["reset"], "-set", parent=display_config, type="type_", set="set_")
     async def config_channel(self, ctx: commands.Context, type_, reset, set_):
         field = "channel." + type_
 
