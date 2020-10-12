@@ -28,6 +28,10 @@ COLORS = {
 
 
 statusLog = {"WARNING": set(), "ERROR": 0, "CRITICAL": 0}
+IGNORED_WARN = [
+    "PyNaCl is not installed, voice will NOT be supported",
+    "Shard ID None has stopped responding to the gateway. Closing and restarting."
+]
 
 
 class CustomTermFormatter(logging.Formatter):
@@ -38,7 +42,7 @@ class CustomTermFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
         s = super().format(record)
-        if record.levelno == logging.WARNING:
+        if record.levelno == logging.WARNING and record.message not in IGNORED_WARN:
             statusLog["WARNING"].add(record.message)
         elif record.levelno != logging.INFO:
             statusLog[record.levelname] += 1
