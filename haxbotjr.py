@@ -1,6 +1,5 @@
 from aiohttp import ClientSession
 from asyncio import run
-from traceback import print_tb
 from colorama import Back, Fore, Style
 
 from discord import Activity, ActivityType

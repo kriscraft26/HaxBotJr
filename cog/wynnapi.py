@@ -9,7 +9,7 @@ from util.timeutil import now
 from logger import Logger
 
 
-LEGACY_URL_HEADER = "https://api.wynncraft.com/public_api.php?"
+LEGACY_URL_HEADER = "https://api.wynncraft.com/public_api.php"
 UPDATE_INTERVAL = 3  # Number of seconds between each update() call.
 
 
@@ -28,8 +28,8 @@ class WynnAPI(commands.Cog):
     """
 
     def __init__(self, session: aiohttp.ClientSession):
-        self.guildStats = WynnData(LEGACY_URL_HEADER + "action=guildStats&command=HackForums")
-        self.serverList = WynnData(LEGACY_URL_HEADER + "action=onlinePlayers")
+        self.guildStats = WynnData(action="guildStats", command="HackForums")
+        self.serverList = WynnData(action="onlinePlayers")
 
         self._session = session
 
@@ -58,12 +58,13 @@ class WynnData:
         Get an instance of this WynnData object's Tracker object.
     """
 
-    def __init__(self, url: str):
+    def __init__(self, **params):
         self._data: dict = None
-        self.url = url
+        self.url = LEGACY_URL_HEADER
+        self.params = params
     
     async def _update(self, session: aiohttp.ClientSession):
-        async with session.get(self.url) as resp:
+        async with session.get(self.url, params=self.params) as resp:
             if resp.status != 200:
                 Logger.bot.warning(f"failed GET {self.url}, status code: {resp.status}")
                 return
