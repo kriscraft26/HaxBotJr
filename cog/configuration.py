@@ -45,25 +45,28 @@ class Configuration(commands.Cog):
             set(Configuration.DEFAULT_CONFIG.keys()))
         for key in removedKeys:
             del self._config[key]
-        
-        sample = self._config["user.dev"].pop()
-        self._config["user.dev"].add(sample)
-        if type(sample) == str:
-            Logger.bot.debug("outed config data detected, updating...")
-
-            getMId = lambda s: self.parse_user(s).id
-            getRId = lambda r: self.parse_role(r).id
-
-            self._config["user.dev"] = set(map(getMId, self._config["user.dev"]))
-            self._config["user.ignore"] = set(map(getMId, self._config["user.ignore"]))
-
-            self._config["role.visual"] = {r: set(map(getRId, rs)) 
-                for r, rs in self._config["role.visual"].items()}
-            self._config["role.personal"] = {r: set(map(getMId, ms)) 
-                for r, ms in self._config["role.personal"].items()}
-            
-            Logger.bot.debug(f"-> {self._config}")
-
+    
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel):
+        for field, val in self._config.items():
+            if field.startswith("channel."):
+                if val == channel.id:
+                    self._config[field] = None
+                    Logger.bot.info(f"{field} set None due to channel deletion")
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        for field, val in self._config.items():
+            if field.startswith("user."):
+                if val == member.id:
+                    self._config[field].remove(member.id)
+                    Logger.bot.info(f"removed {member} from {field} due to member removal")
+        for role, users in self._config["role.personal"]:
+            if member.id in users:
+                users.remove(member.id)
+                Logger.bot.info(
+                    f"removed {member} from {field}.{role} due to  member removal")
+    
     def __call__(self, configName: str):
         return self._config[configName]
     
