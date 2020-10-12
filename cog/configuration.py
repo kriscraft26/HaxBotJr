@@ -56,9 +56,9 @@ class Configuration(commands.Cog):
             self._config["user.dev"] = set(map(getMId, self._config["user.dev"]))
             self._config["user.ignore"] = set(map(getMId, self._config["user.ignore"]))
 
-            self._config["role.visual"] = {getRId(r): set(map(getRId, rs)) 
+            self._config["role.visual"] = {r: set(map(getRId, rs)) 
                 for r, rs in self._config["role.visual"].items()}
-            self._config["role.personal"] = {getRId(r): set(map(getMId, ms)) 
+            self._config["role.personal"] = {r: set(map(getMId, ms)) 
                 for r, ms in self._config["role.personal"].items()}
             
             Logger.bot.debug(f"-> {self._config}")
@@ -100,22 +100,19 @@ class Configuration(commands.Cog):
 
         [*nameRank, _] = nick.split(" ")
         nameRank = " ".join(nameRank).strip()
-        nameRank = find(lambda r: r.name == nameRank, member.roles)
-        if not nameRank:
-            Logger.bot.warning(f"{nick}: missing nick rank")
 
-        if roleRank.id == nameRank.id:
+        if roleRank.name == nameRank:
             return (roleRank.name, None)
         
-        if nameRank.id in self._config["role.visual"]:
-            if roleRank.id in self._config["role.visual"][nameRank.id]:
-                return (roleRank.name, nameRank.name)
+        if nameRank.name in self._config["role.visual"]:
+            if roleRank.id in self._config["role.visual"][nameRank.name]:
+                return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: visual role mismatch")
             return None
         
-        if nameRank.id in self._config["role.personal"]:
-            if member.id in self._config["role.personal"][nameRank.id]:
-                return (roleRank.name, nameRank.name)
+        if nameRank.name in self._config["role.personal"]:
+            if member.id in self._config["role.personal"][nameRank.name]:
+                return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: personal role mismatch")
             return None
         
