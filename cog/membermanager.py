@@ -164,13 +164,13 @@ class MemberManager(commands.Cog):
         currIgn = dMember.nick.split(" ")[-1]
         if gMember.ign != currIgn:
             Logger.guild.info(f"{gMember.ign} changed ign to {currIgn}")
-            del self.ignIdMap[gMember.ign]
-            self.ignIdMap[currIgn] = gMember.id
-            gMember.ign = currIgn
-            if currIgn in self._igMembers and currIgn in self.idleMembers:
+            if currIgn in self._igMembers and gMember.id in self.idleMembers:
                 self._un_mark_idle(gMember.id)
-            elif currIgn not in self._igMembers and currIgn not in self.idleMembers:
+            elif currIgn not in self._igMembers and gMember.id not in self.idleMembers:
                 self._mark_idle(gMember.id)
+            del self.ignIdMap[gMember.ign]
+            gMember.ign = currIgn
+            self.ignIdMap[currIgn] = gMember.id
         
         gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
