@@ -93,18 +93,20 @@ class MemberManager(commands.Cog):
             trackedIgns = self.get_igns_set()
 
             joined = self._igMembers.difference(prevIgMembers)
-            joinedIds = {self.ignIdMap[ign] for ign in joined.intersection(trackedIgns)}
+            joinTracked = joined.intersection(trackedIgns)
+            joinedIds = {self.ignIdMap[ign] for ign in joinTracked}
             self.idleMembers = self.idleMembers.difference(joinedIds)
             if joined:
-                Logger.bot.info(f"{joined} status set to active")
+                Logger.bot.info(f"{joinTracked} status set to active")
                 for ign in joined:
                     await self._config.send("memberLog", ign + " has joined the guild")
             
             removed = prevIgMembers.difference(self._igMembers)
-            removedIds = {self.ignIdMap[ign] for ign in removed.intersection(trackedIgns)}
+            removeTracked = removed.intersection(trackedIgns)
+            removedIds = {self.ignIdMap[ign] for ign in removeTracked}
             self.idleMembers = self.idleMembers.union(removedIds)
             if removed:
-                Logger.bot.info(f"{removed} status set to idle")
+                Logger.bot.info(f"{removeTracked} status set to idle")
                 for ign in removed:
                     await self._config.send("memberLog", ign + " has left the guild")
     
