@@ -42,8 +42,9 @@ class CustomTermFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
         s = super().format(record)
-        if record.levelno == logging.WARNING and record.message not in IGNORED_WARN:
-            statusLog["WARNING"].add(record.message)
+        if record.levelno == logging.WARNING:
+            if record.message not in IGNORED_WARN:
+                statusLog["WARNING"].add(record.message)
         elif record.levelno != logging.INFO:
             statusLog[record.levelname] += 1
         print(s, end="")
