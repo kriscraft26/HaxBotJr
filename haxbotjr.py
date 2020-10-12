@@ -20,6 +20,7 @@ from cog.dateclock import DateClock
 from cog.remotedebugger import RemoteDebugger
 from cog.emeraldtracker import EmeraldTracker
 from cog.snapshotmanager import SnapshotManager
+from cog.claimtracker import ClaimTracker
 
 class HaxBotJr(commands.Bot):
 
@@ -42,6 +43,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataManager.load(XPTracker(self)))
         self.add_cog(DataManager.load(WarTracker(self)))
         self.add_cog(DataManager.load(EmeraldTracker(self)))
+        self.add_cog(DataManager.load(ClaimTracker(self)))
         self.add_cog(RemoteDebugger(self))
         self.add_cog(DateClock(self))
         self.add_cog(DataManager())
