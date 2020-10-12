@@ -30,6 +30,7 @@ class WynnAPI(commands.Cog):
     def __init__(self, session: aiohttp.ClientSession):
         self.guildStats = WynnData(action="guildStats", command="HackForums")
         self.serverList = WynnData(action="onlinePlayers")
+        self.terrList = WynnData(action="territoryList")
 
         self._session = session
 
@@ -39,6 +40,7 @@ class WynnAPI(commands.Cog):
     async def _update(self):
         await self.guildStats._update(self._session)
         await self.serverList._update(self._session)
+        await self.terrList._update(self._session)
     
     @_update.before_loop
     async def _before_update(self):
