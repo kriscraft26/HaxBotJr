@@ -278,8 +278,7 @@ class Configuration(commands.Cog):
             embed: Embed = make_alert(text, title=field, color=COLOR_INFO)
 
             getMember = self.guild.get_role if type_ == "visual" else self.guild.get_member
-            for roleId, memberIds in roleMap.items():
-                role = str(self.guild.get_role(roleId))
+            for role, memberIds in roleMap.items():
                 if memberIds:
                     value = ", ".join(map(lambda i: str(getMember(i)), memberIds))
                 else:
@@ -288,27 +287,16 @@ class Configuration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        if role:
-            role = self.parse_role(role)
-            if not role:
-                await ctx.send(embed=make_alert("bad role entry input"))
-                return
-
         item = remove or add
         if role:
             item = self.parse_role(item) if type_ == "visual" else self.parse_user(item)
             if not item:
                 await ctx.send(embed=make_alert("bad item input"))
                 return
-        else:
-            item = self.parse_role(item)
-            if not item:
-                await ctx.send(embed=make_alert("bad role input"))
-                return
         
         if remove:
             if role:
-                if item.id not in roleMap[role.id]:
+                if item.id not in roleMap[role]:
                     text = f"{item} is not under {role} entry of {type_} roles"
                     await ctx.send(embed=make_alert(text))
                     return
@@ -317,10 +305,10 @@ class Configuration(commands.Cog):
                 successText = \
                     f"Successfully removed {item} from {role} entry of {type_} roles."
 
-                cb = lambda: self._config[field][role.id].remove(item.id)
+                cb = lambda: self._config[field][role].remove(item.id)
                 logMsg = f"Removed {item} from {role} entry of {field} by {ctx.author}"
             else:
-                if item.id not in roleMap:
+                if item not in roleMap:
                     text = f"{item} is not an entry of {type_} roles"
                     await ctx.send(embed=make_alert(text))
                     return
@@ -328,11 +316,11 @@ class Configuration(commands.Cog):
                 text = f"Are you sure to remove {item} entry from {type_} roles?"
                 successText = f"Successfully removed {item} entry from {type_} roles."
 
-                cb = lambda: self._config[field].pop(item.id)
+                cb = lambda: self._config[field].pop(item)
                 logMsg = f"Removed {item} entry from {field} by {ctx.author}"
         else:
             if role:
-                if item.id in roleMap[role.id]:
+                if item.id in roleMap[role]:
                     text = f"{item} is already under {role} entry of {type_} roles"
                     await ctx.send(embed=make_alert(text))
                     return
@@ -340,10 +328,10 @@ class Configuration(commands.Cog):
                 text = f"Are you sure to add {item} to {role} entry of {type_} roles?"
                 successText = f"Successfully added {item} to {role} entry of {type_} roles."
 
-                cb = lambda: self._config[field][role.id].add(item.id)
+                cb = lambda: self._config[field][role].add(item.id)
                 logMsg = f"Added {item} to {role} entry of {field} by {ctx.author}"
             else:
-                if item.id in roleMap:
+                if item in roleMap:
                     text = f"{item} is already an entry of {type_} roles"
                     await ctx.send(embed=make_alert(text))
                     return
@@ -351,7 +339,7 @@ class Configuration(commands.Cog):
                 text = f"Are you sure to add {item} entry to {type_} roles?"
                 successText = f"Successfully added {item} entry to {type_} roles."
 
-                cb = lambda: self._config[field].update({item.id: set()})
+                cb = lambda: self._config[field].update({item: set()})
                 logMsg = f"Added {item} entry to {field} by {ctx.author}"
         
         await ConfirmMessage(
