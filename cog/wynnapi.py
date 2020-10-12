@@ -119,10 +119,10 @@ class WynnData:
                 returned and no new unique API response has received.
             """
             if self._wynnDta._data:
-                currTimestamp = self._wynnDta._data["request"]["timestamp"]
-                if currTimestamp != self.lastTimestamp:
+                currTs = self._wynnDta._data["request"]["timestamp"]
+                if currTs > self.lastTimestamp:
                     self.lastUpdateTime = now()
-                    self.lastTimestamp = currTimestamp
+                    self.lastTimestamp = currTs
                     return self._wynnDta._data
             return None
         
