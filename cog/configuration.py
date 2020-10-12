@@ -171,6 +171,12 @@ class Configuration(commands.Cog):
         else:
             return self.guild.get_member_named(target)
 
+    def _config_change_cb(self, cb, logMsg):
+        def callback(msg):
+            cb()
+            Logger.bot.info(logMsg)
+        return callback
+
     @parser("config channel", ["type", ("xpLog", "bwReport")], ["reset"], "-set",
         parent=display_config, type="type_", set="set_")
     async def config_channel(self, ctx: commands.Context, type_, reset, set_):
@@ -192,7 +198,8 @@ class Configuration(commands.Cog):
             text = f"Are you sure to reset {type_} channel? (currently #{channel.name})"
             successText = f"Successfully reset {type_} channel."
 
-            cb = lambda m: self._set(f"channel.{type_}", None)
+            cb = lambda: self._config.update({field: None})
+            logMsg = f"Reset {field} from {channel} to None by {ctx.author}"
         else:
             channel: TextChannel = self.parse_channel(set_)
             if not channel:
@@ -208,9 +215,14 @@ class Configuration(commands.Cog):
             text = f"Are you sure to set {channelName} as {type_} channel?"
             successText = f"Successfully set {channelName} as {type_} channel."
 
-            cb = lambda m: self._set(field, channel.id)
+            cb = lambda: self._config.update({field: channel.id})
+            prev = self._config[field]
+            if prev:
+                prev = self.guild.get_channel(prev)
+            logMsg = f"Changed {field} from {prev} to {channel} by {ctx.author}"
         
-        await ConfirmMessage(ctx, text, successText, cb).init()
+        await ConfirmMessage(
+            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
             
     
     @parser("config user", ["type", ("dev", "ignore")], "-remove", "-add",
@@ -240,7 +252,9 @@ class Configuration(commands.Cog):
             
             text = f"Are you sure to remove {user} from {type_} users?"
             successText = f"Successfully removed {user} from {type_} users."
-            cb = lambda m: self._set(field, users.difference({user.id}))
+
+            cb = lambda: self._config[field].remove(user.id)
+            logMsg = f"Removed {user} from {field} by {ctx.author}"
         else:
             if user.id in users:
                 text = f"{user} is already part of {type_} users."
@@ -250,29 +264,98 @@ class Configuration(commands.Cog):
             text = f"Are you sure to add {user} to {type_} users?"
             successText = f"Successfully added {user} to {type_} users."
 
-            cb = lambda m: self._set(field, users.union({user.id}))
+            cb = lambda: self._config[field].add(user.id)
+            logMsg = f"Added {user} to {field} by {ctx.author}"
         
-        await ConfirmMessage(ctx, text, successText, cb).init()
+        await ConfirmMessage(
+            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
 
-    @parser("config role", ["type", ("visual", "personal")], "-remove", "-add",
-        parent=display_config, type="type_")
-    async def config_roles(self, ctx: commands.Context, type_, remove, add):
+    @parser("config role", ["type", ("visual", "personal")], "-entry", "-remove", "-add",
+        parent=display_config, type="type_", entry="role")
+    async def config_roles(self, ctx: commands.Context, type_, role, remove, add):
         field = f"role.{type_}"
         roleMap: dict = self._config[field]
 
         if not remove and not add:
-            embed: Embed = make_alert("", title=field, color=COLOR_INFO)
-            for key, val in roleMap.items():
-                embed.add_field(name=key, value=", ".join(val), inline=False)
+            text = "" if roleMap else "Empty"
+            embed: Embed = make_alert(text, title=field, color=COLOR_INFO)
+
+            getMember = self.guild.get_role if type_ == "visual" else self.guild.get_member
+            for roleId, memberIds in roleMap.items():
+                role = str(self.guild.get_role(roleId))
+                if memberIds:
+                    value = ", ".join(map(lambda i: str(getMember(i)), memberIds))
+                else:
+                    value = "Empty"
+                embed.add_field(name=role, value=value, inline=False)
             await ctx.send(embed=embed)
             return
-        
-        try:
-            role = self.guild.get_role(int((remove or add)[3:-1])).name
-        except:
-            await ctx.send(embed=make_alert("bad role input"))
-            return
+
+        if role:
+            role = self.parse_role(role)
+            if not role:
+                await ctx.send(embed=make_alert("bad role entry input"))
+                return
+
+        item = remove or add
+        if role:
+            item = self.parse_role(item) if type_ == "visual" else self.parse_user(item)
+            if not item:
+                await ctx.send(embed=make_alert("bad item input"))
+                return
+        else:
+            item = self.parse_role(item)
+            if not item:
+                await ctx.send(embed=make_alert("bad role input"))
+                return
         
         if remove:
-            if role not in roleMap:
-                pass
+            if role:
+                if item.id not in roleMap[role.id]:
+                    text = f"{item} is not under {role} entry of {type_} roles"
+                    await ctx.send(embed=make_alert(text))
+                    return
+                
+                text = f"Are you sure to remove {item} from {role} entry of {type_} roles?"
+                successText = \
+                    f"Successfully removed {item} from {role} entry of {type_} roles."
+
+                cb = lambda: self._config[field][role.id].remove(item.id)
+                logMsg = f"Removed {item} from {role} entry of {field} by {ctx.author}"
+            else:
+                if item.id not in roleMap:
+                    text = f"{item} is not an entry of {type_} roles"
+                    await ctx.send(embed=make_alert(text))
+                    return
+                
+                text = f"Are you sure to remove {item} entry from {type_} roles?"
+                successText = f"Successfully removed {item} entry from {type_} roles."
+
+                cb = lambda: self._config[field].pop(item.id)
+                logMsg = f"Removed {item} entry from {field} by {ctx.author}"
+        else:
+            if role:
+                if item.id in roleMap[role.id]:
+                    text = f"{item} is already under {role} entry of {type_} roles"
+                    await ctx.send(embed=make_alert(text))
+                    return
+                
+                text = f"Are you sure to add {item} to {role} entry of {type_} roles?"
+                successText = f"Successfully added {item} to {role} entry of {type_} roles."
+
+                cb = lambda: self._config[field][role.id].add(item.id)
+                logMsg = f"Added {item} to {role} entry of {field} by {ctx.author}"
+            else:
+                if item.id in roleMap:
+                    text = f"{item} is already an entry of {type_} roles"
+                    await ctx.send(embed=make_alert(text))
+                    return
+                
+                text = f"Are you sure to add {item} entry to {type_} roles?"
+                successText = f"Successfully added {item} entry to {type_} roles."
+
+                cb = lambda: self._config[field].update({item.id: set()})
+                logMsg = f"Added {item} entry to {field} by {ctx.author}"
+        
+        await ConfirmMessage(
+            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
