@@ -75,9 +75,10 @@ class Configuration(commands.Cog):
         self._config[name] = val
     
     async def send(self, channelName, text, **kwargs):
-        channel = self.bot.get_channel(self._config["channel." + channelName])
-        if not channel:
+        id_ = self._config["channel." + channelName]
+        if not id_:
             return
+        channel = self.bot.get_channel(id_)
         await channel.send(text, **kwargs)
 
     def is_of_group(self, groupName: str, member: Member) -> bool:
