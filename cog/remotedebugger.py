@@ -88,7 +88,7 @@ class RemoteDebugger(commands.Cog):
         self.infoArchives.append(infoArchiveName)
         self.debugArchives.append(debugArchiveName)
     
-    @parser("debug status", parent=debug_root)
+    @parser("debug status", parent=debug_root, isGroup=True)
     async def display_status(self, ctx: commands.Context):
         await ctx.send(decorate_text("  |  ".join([
             "WARNING: %d" % len(statusLog["WARNING"]),
@@ -103,6 +103,12 @@ class RemoteDebugger(commands.Cog):
             return
         await ctx.send(decorate_text("\n".join(statusLog["WARNING"])))
         statusLog["WARNING"].clear()
+
+    @parser("debug status clear", parent=display_status)
+    async def clear_status(self, ctx: commands.Context):
+        statusLog["ERROR"] = 0
+        statusLog["CRITICAL"] = 0
+        await ctx.message.add_reaction("✅")
 
     async def cog_check(self, ctx: commands.Context):
         return await self._config.perm_check(ctx, "user.dev")
