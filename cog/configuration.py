@@ -22,7 +22,8 @@ class Configuration(commands.Cog):
         "role.visual": {},
         "role.personal": {},
         "channel.xpLog": None,
-        "channel.bwReport": None
+        "channel.bwReport": None,
+        "channel.memberLog": None
     }
 
     def __init__(self, bot: commands.Bot):
