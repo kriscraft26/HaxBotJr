@@ -76,8 +76,8 @@ class ClaimTracker(commands.Cog):
         if isClaimAttacked:
             if not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
-        else:
-            self.dismiss_alert()
+                return
+        self.dismiss_alert()
     
     @_claim_update.before_loop
     async def _before_claim_update(self):
@@ -85,11 +85,11 @@ class ClaimTracker(commands.Cog):
         Logger.bot.debug("starting claim update loop")
     
     def schedule_alert(self):
-        if self._config("role.claimAlert") and not self._alert.is_running():
+        if self._config("role.claimAlert") and not self._shouldAlert:
             self._alert.start()
     
     def dismiss_alert(self):
-        if self._alert.is_running():
+        if self._shouldAlert:
             self._shouldAlert = False
             self._alert.stop()
     
