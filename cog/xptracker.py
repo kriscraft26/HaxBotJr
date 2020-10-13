@@ -103,6 +103,12 @@ class XPTracker(commands.Cog):
     async def fix_xp(self, ctx: commands.Context):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
-        id_ = self._memberManager.ignIdMap["IceWarox"]
-        self._lb._total[id_] = self._lb.get_total(id_) + 15000000000
+        id_ = self._memberManager.ignIdMap["chriscold10"]
+        self._lb._total[id_] = self._lb.get_total(id_) + 23346331
         self._lb._rank(id_, self._lb._totalLb, self._lb.get_total)
+
+        self._lb._acc[id_] = self._lb.get_acc(id_) + 23346331
+        self._lb._rank(id_, self._lb._accLb, self._lb.get_acc)
+
+        self._lb._bw[id_] = self._lb.get_bw(id_) + 23151947
+        self._lb._rank(id_, self._lb._bwLb, self._lb.get_bw)
