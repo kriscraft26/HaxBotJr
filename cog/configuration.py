@@ -19,8 +19,8 @@ class Configuration(commands.Cog):
     DEFAULT_CONFIG = {
         "user.dev": set(),
         "user.ignore": set(),
-        "role.visual": {},
-        "role.personal": {},
+        "vrole.visual": {},
+        "vrole.personal": {},
         "channel.xpLog": None,
         "channel.bwReport": None,
         "channel.memberLog": None,
@@ -62,7 +62,7 @@ class Configuration(commands.Cog):
                 if val == member.id:
                     self._config[field].remove(member.id)
                     Logger.bot.info(f"removed {member} from {field} due to member removal")
-        for role, users in self._config["role.personal"]:
+        for role, users in self._config["vrole.personal"]:
             if member.id in users:
                 users.remove(member.id)
                 Logger.bot.info(
@@ -110,14 +110,14 @@ class Configuration(commands.Cog):
         if roleRank.name == nameRank:
             return (roleRank.name, None)
         
-        if nameRank in self._config["role.visual"]:
-            if roleRank.id in self._config["role.visual"][nameRank]:
+        if nameRank in self._config["vrole.visual"]:
+            if roleRank.id in self._config["vrole.visual"][nameRank]:
                 return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: visual role mismatch")
             return None
         
-        if nameRank in self._config["role.personal"]:
-            if member.id in self._config["role.personal"][nameRank]:
+        if nameRank in self._config["vrole.personal"]:
+            if member.id in self._config["vrole.personal"][nameRank]:
                 return (roleRank.name, nameRank)
             Logger.bot.warning(f"{nick}: personal role mismatch")
             return None
@@ -273,10 +273,10 @@ class Configuration(commands.Cog):
         await ConfirmMessage(
             ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
 
-    @parser("config role", ["type", ("visual", "personal")], "-entry", "-remove", "-add",
+    @parser("config vrole", ["type", ("visual", "personal")], "-entry", "-remove", "-add",
         parent=display_config, type="type_", entry="role")
-    async def config_roles(self, ctx: commands.Context, type_, role, remove, add):
-        field = f"role.{type_}"
+    async def config_vrole(self, ctx: commands.Context, type_, role, remove, add):
+        field = f"vrole.{type_}"
         roleMap: dict = self._config[field]
 
         if not remove and not add:
@@ -303,47 +303,47 @@ class Configuration(commands.Cog):
         if remove:
             if role:
                 if item.id not in roleMap[role]:
-                    text = f"{item} is not under {role} entry of {type_} roles"
+                    text = f"{item} is not under {role} entry of {type_} vroles"
                     await ctx.send(embed=make_alert(text))
                     return
                 
-                text = f"Are you sure to remove {item} from {role} entry of {type_} roles?"
+                text = f"Are you sure to remove {item} from {role} entry of {type_} vroles?"
                 successText = \
-                    f"Successfully removed {item} from {role} entry of {type_} roles."
+                    f"Successfully removed {item} from {role} entry of {type_} vroles."
 
                 cb = lambda: self._config[field][role].remove(item.id)
                 logMsg = f"Removed {item} from {role} entry of {field} by {ctx.author}"
             else:
                 if item not in roleMap:
-                    text = f"{item} is not an entry of {type_} roles"
+                    text = f"{item} is not an entry of {type_} vroles"
                     await ctx.send(embed=make_alert(text))
                     return
                 
-                text = f"Are you sure to remove {item} entry from {type_} roles?"
-                successText = f"Successfully removed {item} entry from {type_} roles."
+                text = f"Are you sure to remove {item} entry from {type_} vroles?"
+                successText = f"Successfully removed {item} entry from {type_} vroles."
 
                 cb = lambda: self._config[field].pop(item)
                 logMsg = f"Removed {item} entry from {field} by {ctx.author}"
         else:
             if role:
                 if item.id in roleMap[role]:
-                    text = f"{item} is already under {role} entry of {type_} roles"
+                    text = f"{item} is already under {role} entry of {type_} vroles"
                     await ctx.send(embed=make_alert(text))
                     return
                 
-                text = f"Are you sure to add {item} to {role} entry of {type_} roles?"
-                successText = f"Successfully added {item} to {role} entry of {type_} roles."
+                text = f"Are you sure to add {item} to {role} entry of {type_} vroles?"
+                successText = f"Successfully added {item} to {role} entry of {type_} vroles."
 
                 cb = lambda: self._config[field][role].add(item.id)
                 logMsg = f"Added {item} to {role} entry of {field} by {ctx.author}"
             else:
                 if item in roleMap:
-                    text = f"{item} is already an entry of {type_} roles"
+                    text = f"{item} is already an entry of {type_} vroles"
                     await ctx.send(embed=make_alert(text))
                     return
                 
-                text = f"Are you sure to add {item} entry to {type_} roles?"
-                successText = f"Successfully added {item} entry to {type_} roles."
+                text = f"Are you sure to add {item} entry to {type_} vroles?"
+                successText = f"Successfully added {item} entry to {type_} vroles."
 
                 cb = lambda: self._config[field].update({item: set()})
                 logMsg = f"Added {item} entry to {field} by {ctx.author}"
