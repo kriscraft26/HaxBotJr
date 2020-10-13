@@ -37,7 +37,7 @@ class HaxBotJr(commands.Bot):
         DataManager.load(LeaderBoard("warCount", Logger.war))
 
         self.add_cog(DataManager.load(Configuration(self)))
-        self.add_cog(WynnAPI(HaxBotJr.session))
+        self.add_cog(WynnAPI(self, HaxBotJr.session))
         self.add_cog(SnapshotManager(self))
         self.add_cog(DataManager.load(MemberManager(self)))
         self.add_cog(DataManager.load(XPTracker(self)))
@@ -46,7 +46,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataManager.load(ClaimTracker(self)))
         self.add_cog(RemoteDebugger(self))
         self.add_cog(DateClock(self))
-        self.add_cog(DataManager())
+        self.add_cog(DataManager(self))
 
     @classmethod
     def exit(cls):

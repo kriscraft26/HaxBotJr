@@ -14,7 +14,7 @@ from cog.configuration import Configuration
 
 
 CLAIM_UPDATE_INTERVAL = 6
-CLAIM_ALERT_INTERVAL = 10  # in minutes
+CLAIM_ALERT_DElAY = 5  # in minutes
 
 
 @DataManager.register("_claims")
@@ -31,6 +31,8 @@ class ClaimTracker(commands.Cog):
 
         self._hasInitClaimUpdate = False
         self._shouldAlert = False
+
+        self.bot = bot
     
     def __loaded__(self):
         self._claimNameOrder = list(self._claims.keys())
@@ -71,17 +73,30 @@ class ClaimTracker(commands.Cog):
     
     @_claim_update.before_loop
     async def _before_claim_update(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("starting claim update loop")
     
-    @tasks.loop(minutes=CLAIM_ALERT_INTERVAL)
-    async def _claim_alert_loop(self):
-        # await self._config.send("claimLog", "<@&757336179812204616>")
-        if self._shouldAlert:
-            await self._config.send("claimLog", "@Rocketeer", )
+    def schedule_alert(self):
+        if self._config("role.claimAlert"):
+            self._alert.start()
     
-    @_claim_update.before_loop
-    async def _before_claim_alert_loop(self):
-        Logger.bot.debug("starting claim alert loop")
+    def dismiss_alert(self):
+        if self._alert.is_running():
+            self._shouldAlert = False
+            self._alert.stop()
+    
+    @tasks.loop(minutes=CLAIM_ALERT_DElAY)
+    async def _alert(self):
+        if not self._shouldAlert:
+            self._shouldAlert = True
+            return
+        missing = list(filter(lambda v: v["guild"] != "HackForums", self._claims.values()))
+        if missing:
+            roleId = self._config['role.claimAlert']
+            text = f"⚔️**{len(missing)} claims are missing**⚔️\n<@&{roleId}>"
+            self._config.send("claimAlert", text)
+        self._shouldAlert = False
+        self._alert.stop()
     
     def _parse_acquired(self, acquired):
         return add_tz_info(datetime.strptime(acquired, "%Y-%m-%d %H:%M:%S"))

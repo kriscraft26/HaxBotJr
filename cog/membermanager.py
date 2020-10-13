@@ -64,6 +64,8 @@ class MemberManager(commands.Cog):
 
         self._snapshotManager.add("MemberManager", self)
 
+        self.bot = bot
+
     def __loaded__(self):
         self._ig_members_update.start()
         self._member_deletion.start()
@@ -112,6 +114,7 @@ class MemberManager(commands.Cog):
     
     @_ig_members_update.before_loop
     async def _before_ig_members_update(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting in-game members update loop")
     
     @tasks.loop(minutes=MEMBER_DELETION_INTERVAL)
@@ -123,6 +126,7 @@ class MemberManager(commands.Cog):
         
     @_member_deletion.before_loop
     async def _before_member_deletion(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting member deletion loop")
 
     @commands.Cog.listener()

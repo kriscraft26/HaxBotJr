@@ -62,7 +62,8 @@ class DataManager(commands.Cog):
         DataManager._classes[targetCls][1].add(obj)
         return obj
     
-    def __init__(self):
+    def __init__(self, bot):
+        self.bot = bot
         self._save_loop.start()
 
     def save(self):
@@ -83,4 +84,5 @@ class DataManager(commands.Cog):
     
     @_save_loop.before_loop
     async def _before_save_loop(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting data saving loop")

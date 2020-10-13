@@ -21,6 +21,8 @@ class XPTracker(commands.Cog):
     XP_RESET_THRESHOLD = 10000
 
     def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
@@ -59,6 +61,7 @@ class XPTracker(commands.Cog):
     
     @_update.before_loop
     async def _before_update(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting xp tracking loop")
     
     @tasks.loop(minutes=XP_LOG_INTERVAL)
@@ -83,6 +86,7 @@ class XPTracker(commands.Cog):
     
     @_xp_log.before_loop
     async def _before_xp_log(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting xp logging loop")
     
     @parser("xp", ["acc"], ["total"], "-snap", isGroup=True)

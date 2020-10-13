@@ -20,6 +20,7 @@ WAR_SERVERS_UPDATE_INTERVAL = 3
 class WarTracker(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
+        self.bot = bot
         self.prevInitdWars = []
         self.currentWar = None
         self.hasInitUpdated = False
@@ -92,6 +93,7 @@ class WarTracker(commands.Cog):
     
     @_update.before_loop
     async def _before_update(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting war tracking loop")
 
     @parser("wc", ["acc"], ["total"], "-snap", isGroup=True)

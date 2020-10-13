@@ -27,12 +27,13 @@ class WynnAPI(commands.Cog):
         API request manager for server list.
     """
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, bot, session: aiohttp.ClientSession):
         self.guildStats = WynnData(action="guildStats", command="HackForums")
         self.serverList = WynnData(action="onlinePlayers")
         self.terrList = WynnData(action="territoryList")
 
         self._session = session
+        self.bot = bot
 
         self._update.start()
 
@@ -44,6 +45,7 @@ class WynnAPI(commands.Cog):
     
     @_update.before_loop
     async def _before_update(self):
+        await self.bot.wait_until_ready()
         Logger.bot.debug("Starting Wynncraft API update loop")
 
 
