@@ -23,7 +23,8 @@ class Configuration(commands.Cog):
         "role.personal": {},
         "channel.xpLog": None,
         "channel.bwReport": None,
-        "channel.memberLog": None
+        "channel.memberLog": None,
+        "channel.claimLog": None
     }
 
     def __init__(self, bot: commands.Bot):
@@ -179,7 +180,7 @@ class Configuration(commands.Cog):
             Logger.bot.info(logMsg)
         return callback
 
-    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog")], 
+    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog")], 
         ["reset"], "-set", parent=display_config, type="type_", set="set_")
     async def config_channel(self, ctx: commands.Context, type_, reset, set_):
         field = "channel." + type_
