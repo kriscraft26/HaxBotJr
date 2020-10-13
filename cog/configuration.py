@@ -62,7 +62,7 @@ class Configuration(commands.Cog):
                 if val == member.id:
                     self._config[field].remove(member.id)
                     Logger.bot.info(f"removed {member} from {field} due to member removal")
-        for role, users in self._config["vrole.personal"]:
+        for role, users in self._config["vrole.personal"].items():
             if member.id in users:
                 users.remove(member.id)
                 Logger.bot.info(
@@ -179,6 +179,8 @@ class Configuration(commands.Cog):
             cb()
             Logger.bot.info(logMsg)
         return callback
+    
+    # def _config_setter(self, pre, preMsg, msg, sMsg)
 
     @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog")], 
         ["reset"], "-set", parent=display_config, type="type_", set="set_")
@@ -188,7 +190,7 @@ class Configuration(commands.Cog):
         if not reset and not set_:
             title = "channel." + type_
             channel = self.guild.get_channel(self._config[field])
-            text = "#" + channel.name if channel else "Not set"
+            text = str(channel) if channel else "Not set"
             await ctx.send(embed=make_alert(text, title=title, color=COLOR_INFO))
             return
 
