@@ -24,7 +24,9 @@ class Configuration(commands.Cog):
         "channel.xpLog": None,
         "channel.bwReport": None,
         "channel.memberLog": None,
-        "channel.claimLog": None
+        "channel.claimLog": None,
+        "channel.claimAlert": None,
+        "role.claimAlert": None
     }
 
     def __init__(self, bot: commands.Bot):
@@ -180,55 +182,63 @@ class Configuration(commands.Cog):
             Logger.bot.info(logMsg)
         return callback
     
-    # def _config_setter(self, pre, preMsg, msg, sMsg)
-
-    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog")], 
-        ["reset"], "-set", parent=display_config, type="type_", set="set_")
-    async def config_channel(self, ctx: commands.Context, type_, reset, set_):
-        field = "channel." + type_
+    async def _config_val(self, ctx, name, valGetter, valParser, type_, reset, set_):
+        field = name + "." + type_
+        fieldDisplay = type_ + " " + name
 
         if not reset and not set_:
-            title = "channel." + type_
-            channel = self.guild.get_channel(self._config[field])
-            text = str(channel) if channel else "Not set"
-            await ctx.send(embed=make_alert(text, title=title, color=COLOR_INFO))
+            val = valGetter(self._config[field])
+            text = str(val) if val else "Not set"
+            await ctx.send(embed=make_alert(text, title=field, color=COLOR_INFO))
             return
 
         if reset:
-            channel = self.guild.get_channel(self._config[field])
-            if not channel:
-                text = f"There are no channel set as {type_} channel"
+            val = valGetter(self._config[field])
+            if not val:
+                text = f"There are no {name} set as {fieldDisplay}"
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
-            text = f"Are you sure to reset {type_} channel? (currently #{channel.name})"
-            successText = f"Successfully reset {type_} channel."
+            text = f"Are you sure to reset {fieldDisplay}? (currently {val})"
+            successText = f"Successfully reset {fieldDisplay}."
 
             cb = lambda: self._config.update({field: None})
-            logMsg = f"Reset {field} from {channel} to None by {ctx.author}"
+            logMsg = f"Reset {field} from {val} to None by {ctx.author}"
         else:
-            channel: TextChannel = self.parse_channel(set_)
-            if not channel:
-                await ctx.send(embed=make_alert("bad channel input"))
+            val = valParser(set_)
+            if not val:
+                await ctx.send(embed=make_alert(f"bad {name} input"))
                 return
-            channelName = f"#{channel.name}"
 
-            if self._config[field] == channel.id:
-                text = f"{channelName} is already set as {type_} channel."
+            if self._config[field] == val.id:
+                text = f"{val} is already set as {fieldDisplay}."
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
 
-            text = f"Are you sure to set {channelName} as {type_} channel?"
-            successText = f"Successfully set {channelName} as {type_} channel."
+            text = f"Are you sure to set {val} as {fieldDisplay}?"
+            successText = f"Successfully set {val} as {fieldDisplay}."
 
-            cb = lambda: self._config.update({field: channel.id})
+            cb = lambda: self._config.update({field: val.id})
             prev = self._config[field]
             if prev:
-                prev = self.guild.get_channel(prev)
-            logMsg = f"Changed {field} from {prev} to {channel} by {ctx.author}"
+                prev = valGetter(prev)
+            logMsg = f"Changed {field} from {prev} to {val} by {ctx.author}"
         
         await ConfirmMessage(
             ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
-            
+
+    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog", 
+        "claimAlert")], ["reset"], "-set", parent=display_config, type="type_", set="set_")
+    async def config_channel(self, ctx: commands.Context, type_, reset, set_):
+        getter = self.guild.get_channel
+        parser = self.parse_channel
+        await self._config_val(ctx, "channel", getter, parser, type_, reset, set_)
+
+    @parser("config role", ["type", ("claimAlert")], ["reset"], "-set", 
+        parent=display_config, type="type_", set="set_")
+    async def config_role(self, ctx, type_, reset, set_):
+        getter = self.guild.get_role
+        parser = self.parse_role
+        await self._config_val(ctx, "role", getter, parser, type_, reset, set_)
     
     @parser("config user", ["type", ("dev", "ignore")], "-remove", "-add",
         parent=display_config, type="type_")
