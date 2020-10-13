@@ -55,6 +55,8 @@ class WarTracker(commands.Cog):
                 Logger.war.info(f"War at {self.currentWar} ended")
                 self.currentWar = None
                 self.prevInitdWars = []
+            else:
+                self.bot.get_cog("ClaimTracker").dismiss_alert()
         else:
             trackedIgns = self._memberManager.get_tracked_igns()
             for war in self.prevInitdWars:

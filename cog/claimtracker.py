@@ -51,12 +51,14 @@ class ClaimTracker(commands.Cog):
             self._allTerrs = set(claimList.keys())
             self._hasInitClaimUpdate = True
         
+        isClaimAttacked = False
+        
         for claim in self._claims:
             prevGuild = self._claims[claim]["guild"]
             currGuild = claimList[claim]["guild"]
+            isClaimAttacked = currGuild != "HackForums"
             self._claims[claim]["guild"] = currGuild
             if prevGuild != currGuild:
-                self._shouldAlert = True
                 if currGuild == "HackForums":
                     emoji = "🛡️"
                 elif prevGuild == "HackForums":
@@ -70,6 +72,12 @@ class ClaimTracker(commands.Cog):
             self._claims[claim]["acquired"] = acquired
         
         self._order_claim_names()
+
+        if isClaimAttacked:
+            if not self.bot.get_cog("WarTracker").currentWar:
+                self.schedule_alert()
+        else:
+            self.dismiss_alert()
     
     @_claim_update.before_loop
     async def _before_claim_update(self):
@@ -77,7 +85,7 @@ class ClaimTracker(commands.Cog):
         Logger.bot.debug("starting claim update loop")
     
     def schedule_alert(self):
-        if self._config("role.claimAlert"):
+        if self._config("role.claimAlert") and not self._alert.is_running():
             self._alert.start()
     
     def dismiss_alert(self):
@@ -85,16 +93,36 @@ class ClaimTracker(commands.Cog):
             self._shouldAlert = False
             self._alert.stop()
     
-    @tasks.loop(minutes=CLAIM_ALERT_DElAY)
+    @tasks.loop(seconds=CLAIM_ALERT_DElAY)
     async def _alert(self):
         if not self._shouldAlert:
             self._shouldAlert = True
             return
-        missing = list(filter(lambda v: v["guild"] != "HackForums", self._claims.values()))
+        
+        isMissing = lambda t: self._claims[t]["guild"] != "HackForums"
+        missing = list(filter(isMissing, self._claimNameOrder))
         if missing:
-            roleId = self._config['role.claimAlert']
-            text = f"⚔️**{len(missing)} claims are missing**⚔️\n<@&{roleId}>"
-            self._config.send("claimAlert", text)
+            roleId = self._config('role.claimAlert')
+
+            missingNum = len(missing)
+            if missingNum == 1:
+                text = f"⚠️  **1 claim is missing**  <@&{roleId}>"
+            else:
+                text = f"⚠️  **{len(missing)} claims are missing**>  <@&{roleId}>"
+
+            entries = []
+            maxTerrLen = max(map(len, missing))
+            template = "[{0:<2}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
+
+            for index, terr in enumerate(missing):
+                dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
+                entry = template.format(index + 1, terr, dt)
+                guild = self._claims[terr]["guild"]
+                entries.append(template.format(index + 1, terr, dt) + f"  [{guild}]")
+            
+            text += "\n" + decorate_text("\n".join(entries))
+
+            await self._config.send("claimAlert", text)
         self._shouldAlert = False
         self._alert.stop()
     
