@@ -89,6 +89,16 @@ class ClaimTracker(commands.Cog):
     def _order_claim_names(self):
         self._claimNameOrder.sort(key=lambda c: self._claims[c]["acquired"], reverse=True)
 
+    def _format_timedelta(self, dt: timedelta):
+        seconds = trunc(dt.seconds)
+
+        weeks = dt.days // 7
+        days = dt.days % 7
+        hours = seconds // 3600
+        minutes = seconds // 60 % 60
+        seconds = seconds % 60
+        return f"{weeks:02}/{days:02} {hours:02}:{minutes:02}:{seconds:02}"
+
     @parser("claim", isGroup=True)
     async def display_claims(self, ctx: commands.Context):
         if not self._claims:
@@ -97,20 +107,19 @@ class ClaimTracker(commands.Cog):
 
         entries = []
         maxTerrLen = max(map(len, self._claimNameOrder))
-        maxGLen = max(map(lambda c: len(c["guild"]), self._claims.values()))
-        maxDTLen = -1
+        template = "[{0:<2}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
 
-        for terr in self._claimNameOrder:
-            dt = now() - self._claims[terr]["acquired"]
-            dt = str(timedelta(seconds=trunc(dt.total_seconds())))
-            maxDTLen = len(dt)
-            entries.append((terr, self._claims[terr]["guild"], dt))
+        for index, terr in enumerate(self._claimNameOrder):
+            dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
+            entry = template.format(index + 1, terr, dt)
+            guild = self._claims[terr]["guild"]
+            if guild == "HackForums":
+                entries.append("--" + entry)
+            else:
+                entries.append(f"––{entry}  [{guild}]")
         
-        template = "{0:%d}  |  {1:%d}  |  {2:>%d}" % (maxTerrLen, maxGLen, maxDTLen)
-        entries = list(map(lambda e: template.format(*e), entries))
-        
-        pages = make_entry_pages(entries, title="Claims", api=self._terrListTracker)
-        await PagedMessage(pages, ctx.channel).init()
+        await ctx.send(decorate_text("\n".join(entries), 
+            title="Claims", api=self._terrListTracker))
     
     @parser("claim add", "terrs...", parent=display_claims)
     async def add_claims(self, ctx: commands.Context, terrs):
