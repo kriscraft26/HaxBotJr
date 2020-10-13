@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from math import trunc
 
-from discord import AllowedMentions
 from discord.ext import commands, tasks
 
 from logger import Logger
