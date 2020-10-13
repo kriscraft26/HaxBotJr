@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from math import trunc
 
+from discord import AllowedMentions
 from discord.ext import commands, tasks
 
 from logger import Logger
@@ -14,6 +15,7 @@ from cog.configuration import Configuration
 
 
 CLAIM_UPDATE_INTERVAL = 6
+CLAIM_ALERT_INTERVAL = 10  # in minutes
 
 
 @DataManager.register("_claims")
@@ -28,7 +30,8 @@ class ClaimTracker(commands.Cog):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._terrListTracker = wynnAPI.terrList.get_tracker()
 
-        self.hasInitClaimUpdate = False
+        self._hasInitClaimUpdate = False
+        self._shouldAlert = False
     
     def __loaded__(self):
         self._claimNameOrder = list(self._claims.keys())
@@ -43,12 +46,25 @@ class ClaimTracker(commands.Cog):
             return
         claimList = claimList["territories"]
 
-        if not self.hasInitClaimUpdate:
+        if not self._hasInitClaimUpdate:
             self._allTerrs = set(claimList.keys())
-            self.hasInitClaimUpdate = True
+            self._hasInitClaimUpdate = True
         
         for claim in self._claims:
-            self._claims[claim]["guild"] = claimList[claim]["guild"]
+            prevGuild = self._claims[claim]["guild"]
+            currGuild = claimList[claim]["guild"]
+            self._claims[claim]["guild"] = currGuild
+            if prevGuild != currGuild:
+                self._shouldAlert = True
+                if currGuild == "HackForums":
+                    emoji = "🛡️"
+                elif prevGuild == "HackForums":
+                    emoji = "⚔️"
+                else:
+                    emoji = "🏹"
+                text = f"{emoji} **{claim}**  __{prevGuild}__  ->  __{currGuild}__"
+                await self._config.send("claimLog", text)
+
             acquired = self._parse_acquired(claimList[claim]["acquired"])
             self._claims[claim]["acquired"] = acquired
         
@@ -57,6 +73,16 @@ class ClaimTracker(commands.Cog):
     @_claim_update.before_loop
     async def _before_claim_update(self):
         Logger.bot.debug("starting claim update loop")
+    
+    @tasks.loop(minutes=CLAIM_ALERT_INTERVAL)
+    async def _claim_alert_loop(self):
+        # await self._config.send("claimLog", "<@&757336179812204616>")
+        if self._shouldAlert:
+            await self._config.send("claimLog", "@Rocketeer", )
+    
+    @_claim_update.before_loop
+    async def _before_claim_alert_loop(self):
+        Logger.bot.debug("starting claim alert loop")
     
     def _parse_acquired(self, acquired):
         return add_tz_info(datetime.strptime(acquired, "%Y-%m-%d %H:%M:%S"))
