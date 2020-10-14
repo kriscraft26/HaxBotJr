@@ -5,16 +5,16 @@ NONE
 
 
 Player Statistic=
-`stats <ign>`: display a player's stats.
-`em [-a] [-t]`: display the emerald leader board.T#
+`stats <ign> [-s KEY]`: display a player's stats.
+`em [-a] [-t] [-s KEY]`: display the emerald leader board.T#
 `em parse`: parse provided /gu list output and update emerald stats.#
-`xp [-a] [-t]`: display the xp leader board.
-`wc [-a] [-t]`: display the war count leader board.
+`xp [-a] [-t] [-s KEY]`: display the xp leader board.
+`wc [-a] [-t] [-s KEY]`: display the war count leader board.
 
 
 Guild Members=
-`members [-i]`: display the guild member list.
-S#`members missing`: display list of in-game guild members that are missing from discord guild member list.#
+`members [-i] [-s KEY]`: display the guild member list.
+S#`members missing [-s KEY]`: display list of in-game guild members that are missing from discord guild member list.#
 
 
 Claims=
