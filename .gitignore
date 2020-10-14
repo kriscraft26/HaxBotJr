@@ -5,3 +5,4 @@ meta
 __pycache__
 .env
 *.snapshot
+data/*.zip
