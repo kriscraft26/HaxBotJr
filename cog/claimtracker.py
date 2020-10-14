@@ -57,7 +57,8 @@ class ClaimTracker(commands.Cog):
         for claim in self._claims:
             prevGuild = self._claims[claim]["guild"]
             currGuild = claimList[claim]["guild"]
-            isClaimAttacked = currGuild != "HackForums"
+            if currGuild != "HackForums":
+                isClaimAttacked = True
             self._claims[claim]["guild"] = currGuild
             if prevGuild != currGuild:
                 if currGuild == "HackForums":
@@ -87,11 +88,11 @@ class ClaimTracker(commands.Cog):
         Logger.bot.debug("starting claim update loop")
     
     def schedule_alert(self):
-        if self._config("role.claimAlert") and not self._shouldAlert:
+        if self._config("role.claimAlert") and not self._alert.is_running():
             self._alert.start()
     
     def dismiss_alert(self):
-        if self._shouldAlert:
+        if self._alert.is_running():
             self._shouldAlert = False
             self._alert.stop()
     
@@ -213,6 +214,14 @@ class ClaimTracker(commands.Cog):
         text = f"Successfully removed {len(validTerrs)} claims."
         subText = f"Ignored {len(invalidTerrs)} claims." if invalidTerrs else None
         await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_SUCCESS))
-    
+
+    @parser("claim alertStatus", parent=display_claims)
     async def get_alert_status(self, ctx: commands.Context):
-        pass
+        if not await self._config.perm_check(ctx, "user.dev"):
+            return
+        time = self._alert.next_iteration
+        if time:
+            text = f"`Alert is scheduled at {self._alert.next_iteration}`"
+        else:
+            text = f"`Alert is not scheduled`"
+        await ctx.send(text)
