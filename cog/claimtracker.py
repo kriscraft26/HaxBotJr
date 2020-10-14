@@ -34,6 +34,7 @@ class ClaimTracker(commands.Cog):
         # 1 = scheduled
         # 2 = active
         self._alertStatus = 0
+        self._alertMsg = None
         self._alertStatusMsg = None
 
         self.bot = bot
@@ -57,6 +58,7 @@ class ClaimTracker(commands.Cog):
         
         isClaimAttacked = False
         isClaimReclaimed = False
+        isClaimChanged = False
         
         for claim in self._claims:
             prevGuild = self._claims[claim]["guild"]
@@ -65,6 +67,7 @@ class ClaimTracker(commands.Cog):
                 isClaimAttacked = True
             self._claims[claim]["guild"] = currGuild
             if prevGuild != currGuild:
+                isClaimChanged = True
                 if currGuild == "HackForums":
                     emoji = "🛡️"
                     isClaimReclaimed = True
@@ -80,6 +83,8 @@ class ClaimTracker(commands.Cog):
         
         self._order_claim_names()
 
+        if isClaimChanged:
+            await self.update_alert()
         if isClaimAttacked and not isClaimReclaimed:
             if not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
@@ -99,6 +104,11 @@ class ClaimTracker(commands.Cog):
             else:
                 self._alert.start()
     
+    async def update_alert(self):
+        if self._alertStatus == 2:
+            text = self._make_alert_text()
+            await self._alertMsg.edit(content=text)
+    
     async def dismiss_alert(self):
         if self._alertStatus:
             Logger.bot.info(f"claim alert is canceled")
@@ -109,42 +119,47 @@ class ClaimTracker(commands.Cog):
                 text = "👌 *the situation has been taken care of.*"
                 await self._alertStatusMsg.edit(content=text)
                 self._alertStatusMsg = None
+            self._alertMsg = None
 
-    @tasks.loop(minutes=CLAIM_ALERT_DElAY)
+    @tasks.loop(seconds=CLAIM_ALERT_DElAY)
     async def _alert(self):
         if not self._alertStatus:
             self._alertStatus = 1
             return
         self._alertStatus = 2
         
+        text = self._make_alert_text()
+        self._alertMsg = await self._config.send("claimAlert", text)
+
+        statusText = "*Please reclaim our missing territories.*"
+        self._alertStatusMsg = await self._config.send("claimAlert", statusText)
+
+        self._alert.stop()
+    
+    def _make_alert_text(self):
         isMissing = lambda t: self._claims[t]["guild"] != "HackForums"
         missing = list(filter(isMissing, self._claimNameOrder))
-        if missing:
-            roleId = self._config('role.claimAlert')
 
-            missingNum = len(missing)
-            if missingNum == 1:
-                text = f"⚠️  **1 claim is missing**  <@&{roleId}>"
-            else:
-                text = f"⚠️  **{len(missing)} claims are missing**>  <@&{roleId}>"
+        roleId = self._config('role.claimAlert')
 
-            entries = []
-            maxTerrLen = max(map(len, missing))
-            template = "[{0:02}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
+        missingNum = len(missing)
+        if missingNum == 1:
+            text = f"⚠️  **1 claim is missing**  <@&{roleId}>"
+        else:
+            text = f"⚠️  **{len(missing)} claims are missing**  <@&{roleId}>"
 
-            for index, terr in enumerate(missing):
-                dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
-                entry = template.format(index + 1, terr, dt)
-                guild = self._claims[terr]["guild"]
-                entries.append(template.format(index + 1, terr, dt) + f"  [{guild}]")
-            
-            text += "\n" + decorate_text("\n".join(entries))
+        entries = []
+        maxTerrLen = max(map(len, missing))
+        template = "[{0:02}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
 
-            await self._config.send("claimAlert", text)
-
-            statusText = "*Please reclaim our missing territories.*"
-            self._alertStatusMsg = await self._config.send("claimAlert", statusText)
-        self._alert.stop()
+        for index, terr in enumerate(missing):
+            dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
+            entry = template.format(index + 1, terr, dt)
+            guild = self._claims[terr]["guild"]
+            entries.append(template.format(index + 1, terr, dt) + f"  [{guild}]")
+        
+        text += "\n" + decorate_text("\n".join(entries))
+        return text
     
     def _parse_acquired(self, acquired):
         return add_tz_info(datetime.strptime(acquired, "%Y-%m-%d %H:%M:%S"))
@@ -231,6 +246,8 @@ class ClaimTracker(commands.Cog):
         text = f"Successfully removed {len(validTerrs)} claims."
         subText = f"Ignored {len(invalidTerrs)} claims." if invalidTerrs else None
         await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_SUCCESS))
+
+        await self.update_alert()
 
     @parser("claim alert", parent=display_claims, isGroup=True)
     async def get_alert_status(self, ctx: commands.Context):
