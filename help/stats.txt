@@ -1,0 +1,46 @@
+NONE
+
+
+`stats <ign> [-s|--snap KEY]`
+
+Given ign of a guild member, display all player statistics and info of that member.
+
+
+Membership=
+In order for a guild member to recognized as a guild member, their discord account must
+1. have a rank role (Cosmonaut, MoonWalker, Cadet...)
+2. Nickname in the format of "ROLE IGN"
+3. The role part of the nickname must be the same as their rank role ("Rocketeer Pucaet"), or is a registered visual role ("Top Gunner Pucaet").
+Registered visual roles can be displayed and modified through `config vrole`.
+A user that is part of `user.ignore` will never be recognized. `user.ignore` can be displayed and modified through `config user ignore`
+
+
+Player Statistic Types=
+All statistics are accumulated, which means they are calculated by summing up the changes of the real stat.
+There are three statistic types: Total, Accumulated and Bi-Weekly.
+They are the same, the only difference between them is when they are reset to 0.
+
+__Total__: never reset.
+__Accumulated__: reset when rank change.
+__Bi-Weekly__: reset at beginning of bi-week.
+
+
+Snapshot=
+Before each bi-weekly reset, a snapshot is taken for every commands that supports snapshot, and their result is preserved as a snapshot.
+Those commands all have a `[-s|--snap KEY]` argument, which is used to access its snapshots by specify a key.
+A key can be in 3 forms:
+
+__index__: this is a number that specify a bi-week relative to current bi-week. 
+For example `-s 1` will access the snapshot of previous bi-week, and `-s 2` is the bi-week before that, and so on.
+__date__: this will access the snapshot of the bi-week which the date is contained in, the date need to be in the format of `YYYY/MM/DD`.
+For example `-s 2020/10/14` will access the snapshot of bi-week of 2020/10/11 - 2020/10/24.
+__bi-week__: this will access the snapshot of that bi-week, it need to be in the format of `YYYY/MM/DD-YYYY/MM/DD`, with the left side as the first day of bi-week, and right side as the last day.
+For example `-s 2020/10/11-2020/10/24` will access the snapshot of that bi-week.
+
+
+Examples=
+`stats Pucaet`
+`stats Pucaet -s 1`
+
+
+NONE

@@ -1,0 +1,18 @@
+restriction: cap+
+
+
+`em parse`
+
+Once a user called this command, the next file the user uploads will be parsed for contributed emeralds.
+
+
+How to update emerald stats=
+1. type `/gu list` in game.
+2. go to `.minecraft/logs/` and open `latest.log`.
+3. find the output of `/gu list` and copy it.
+4. call `]em parse`.
+5. paste the copied text in the discord send box.
+6. discord will tell you that the text is too long and it will be sent as a file instead, allow it.
+
+
+NONE

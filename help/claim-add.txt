@@ -1,0 +1,16 @@
+restriction: chief+
+
+
+`claim add [terrs ...]`
+
+Add given list of territory names to the claim list.
+
+Note that if the territory name contains space, wrap it with `"`, for example `"Lava Lake"` instead of `Lava Lake`
+
+
+Examples=
+`claim add Rodoroc`
+`claim add "Active Volcano" Rodoroc "Lava Lake Bridge"`
+
+
+NONE

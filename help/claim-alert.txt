@@ -1,0 +1,24 @@
+restriction: cap+
+
+
+`claim alert`
+
+Display the state of claim alert, and if it is scheduled, the time remaining until the alert is active is also displayed.
+
+Alert can be manually canceled through `claim alert cancel`, note it doesn't prevent feather alert scheduling.
+
+
+Claim Alert=
+A claim alert is scheduled once a claim is missing, and within __6 minutes__ after which, if 
+1. no existing active claim alert 
+2. no active war in the guild
+3. no reclaiming
+The alert is then become active, and posted in `channel.claimAlert` with `role.claimAlert` ping.
+If any of the 3 condition failed, the alert is canceled.
+
+`channel.claimAlert` can be displayed and modified through `config channel claimAlert`.
+`role.claimAlert` can be displayed and modified through `config role claimAlert`.
+If any of those two configuration fields are not set, the alert will never be scheduled.
+
+
+NONE

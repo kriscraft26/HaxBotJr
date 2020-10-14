@@ -1,0 +1,26 @@
+restriction: chief+
+
+
+`config role {NAME} [-r|--reset] [-s|--set CHANNEL]`
+
+Access the field `role.NAME`, the field can also be modified through the modifier flags.
+
+
+Configuration value=
+All field access/modify commands has modifier flags that require a value to be followed after it,
+the value can be in 2 forms:
+
+__link/mention__: @role name, @user name, #channel-name
+__name__: "role name", "user name", channel-name.
+
+note if the name contains space, wrap it with `"`, for example "Top Gunner" instead of Top Gunner.
+
+
+Examples=
+`config role claimAlert`
+`config role claimAlert -r`
+`config role claimAlert --set @Claim Alert`
+`config role claimAlert -s "Claim Alert"`
+
+
+NONE

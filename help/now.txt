@@ -1,0 +1,9 @@
+NONE
+
+
+`now`
+
+Display internal time of the bot, and the number of day of the bi-week.
+
+
+NONE

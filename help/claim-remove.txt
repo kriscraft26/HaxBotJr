@@ -1,0 +1,16 @@
+restriction: chief+
+
+
+`claim remove [terrs ...]`
+
+Remove given list of territory names from the claim list.
+
+Note that if the territory name contains space, wrap it with `"`, for example `"Lava Lake"` instead of `Lava Lake`
+
+
+Examples=
+`claim remove Rodoroc`
+`claim remove "Active Volcano" Rodoroc "Lava Lake Bridge"`
+
+
+NONE

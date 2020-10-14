@@ -21,6 +21,7 @@ from cog.remotedebugger import RemoteDebugger
 from cog.emeraldtracker import EmeraldTracker
 from cog.snapshotmanager import SnapshotManager
 from cog.claimtracker import ClaimTracker
+from cog.help import Help
 
 class HaxBotJr(commands.Bot):
 
@@ -47,6 +48,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(RemoteDebugger(self))
         self.add_cog(DateClock(self))
         self.add_cog(DataManager(self))
+        self.add_cog(Help(self))
 
     @classmethod
     def exit(cls):

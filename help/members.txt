@@ -1,0 +1,43 @@
+NONE
+
+
+`members [-i|--idle] [-s|--snap KEY]`
+
+Display list of guild members. By using the `[-i|--idle]` flag, the list filtered and only displays idle members.
+
+
+Membership=
+In order for a guild member to recognized as a guild member, their discord account must
+1. have a rank role (Cosmonaut, MoonWalker, Cadet...)
+2. Nickname in the format of "ROLE IGN"
+2. The role part of the nickname must be the same as their rank role ("Rocketeer Pucaet"), or is a registered visual role ("Top Gunner Pucaet").
+Registered visual roles can be displayed and modified through `config vrole`.
+A user that is part of `user.ignore` will never be recognized. `user.ignore` can be displayed and modified through `config user ignore`
+
+
+Idle Members=
+A guild member is considered as idle if their ign (as specified by their nick) is not in the in-game guild.
+Once a guild member is marked as idle, their stats won't be updated.
+
+
+Snapshot=
+Before each bi-weekly reset, a snapshot is taken for every commands that supports snapshot, and their result is preserved as a snapshot.
+Those commands all have a `[-s|--snap KEY]` argument, which is used to access its snapshots by specify a key.
+A key can be in 3 forms:
+
+__index__: this is a number that specify a bi-week relative to current bi-week. 
+For example `-s 1` will access the snapshot of previous bi-week, and `-s 2` is the bi-week before that, and so on.
+__date__: this will access the snapshot of the bi-week which the date is contained in, the date need to be in the format of `YYYY/MM/DD`.
+For example `-s 2020/10/14` will access the snapshot of bi-week of 2020/10/11 - 2020/10/24.
+__bi-week__: this will access the snapshot of that bi-week, it need to be in the format of `YYYY/MM/DD-YYYY/MM/DD`, with the left side as the first day of bi-week, and right side as the last day.
+For example `-s 2020/10/11-2020/10/24` will access the snapshot of that bi-week.
+
+
+Examples=
+`members`
+`members -i`
+`members -s 2020/10/10`
+`members -i -s 1`
+
+
+NONE

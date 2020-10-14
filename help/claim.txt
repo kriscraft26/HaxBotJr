@@ -1,0 +1,12 @@
+NONE
+
+
+`claim`
+
+Display list of claim and their status: how long the owner of the territory has been holding it, and the name of the owner guild.
+Territory that is owned by us is grayed out.
+
+Claim list can be edited through `claim add` and `claim remove`.
+
+
+NONE
