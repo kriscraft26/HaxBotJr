@@ -45,9 +45,10 @@ class ClaimTracker(commands.Cog):
 
         self._claim_update.start()
 
-    @tasks.loop(minutes=CLAIM_UPDATE_INTERVAL)
+    @tasks.loop(seconds=CLAIM_UPDATE_INTERVAL)
     async def _claim_update(self):
         claimList = self._terrListTracker.getData()
+        print(claimList)
         if not claimList:
             return
         claimList = claimList["territories"]
@@ -83,10 +84,10 @@ class ClaimTracker(commands.Cog):
         
         self._order_claim_names()
 
-        if isClaimChanged:
-            await self.update_alert()
-        if isClaimAttacked and not isClaimReclaimed:
-            if not self.bot.get_cog("WarTracker").currentWar:
+        if isClaimAttacked:
+            if isClaimChanged:
+                await self.update_alert()
+            if not isClaimReclaimed and not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
                 return
         await self.dismiss_alert()
@@ -107,7 +108,8 @@ class ClaimTracker(commands.Cog):
     async def update_alert(self):
         if self._alertStatus == 2:
             text = self._make_alert_text()
-            await self._alertMsg.edit(content=text)
+            if text:
+                await self._alertMsg.edit(content=text)
     
     async def dismiss_alert(self):
         if self._alertStatus:
@@ -121,7 +123,7 @@ class ClaimTracker(commands.Cog):
                 self._alertStatusMsg = None
             self._alertMsg = None
 
-    @tasks.loop(seconds=CLAIM_ALERT_DElAY)
+    @tasks.loop(minutes=CLAIM_ALERT_DElAY)
     async def _alert(self):
         if not self._alertStatus:
             self._alertStatus = 1
@@ -139,6 +141,8 @@ class ClaimTracker(commands.Cog):
     def _make_alert_text(self):
         isMissing = lambda t: self._claims[t]["guild"] != "HackForums"
         missing = list(filter(isMissing, self._claimNameOrder))
+        if not missing:
+            return None
 
         roleId = self._config('role.claimAlert')
 
@@ -205,6 +209,7 @@ class ClaimTracker(commands.Cog):
             return
 
         terrs = set(terrs)
+        print(self._allTerrs)
         validTerrs = terrs.intersection(self._allTerrs)
 
         if not validTerrs:
