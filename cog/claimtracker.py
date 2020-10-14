@@ -93,7 +93,7 @@ class ClaimTracker(commands.Cog):
             self._shouldAlert = False
             self._alert.stop()
     
-    @tasks.loop(seconds=CLAIM_ALERT_DElAY)
+    @tasks.loop(minutes=CLAIM_ALERT_DElAY)
     async def _alert(self):
         if not self._shouldAlert:
             self._shouldAlert = True
@@ -112,7 +112,7 @@ class ClaimTracker(commands.Cog):
 
             entries = []
             maxTerrLen = max(map(len, missing))
-            template = "[{0:<2}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
+            template = "[{0:02}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
 
             for index, terr in enumerate(missing):
                 dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
@@ -150,7 +150,7 @@ class ClaimTracker(commands.Cog):
 
         entries = []
         maxTerrLen = max(map(len, self._claimNameOrder))
-        template = "[{0:<2}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
+        template = "[{0:02}] {1:%d}  |  {2:%d}" % (maxTerrLen, 14)
 
         for index, terr in enumerate(self._claimNameOrder):
             dt = self._format_timedelta(now() - self._claims[terr]["acquired"])
