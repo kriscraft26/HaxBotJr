@@ -52,6 +52,7 @@ class ClaimTracker(commands.Cog):
             self._hasInitClaimUpdate = True
         
         isClaimAttacked = False
+        isClaimReclaimed = False
         
         for claim in self._claims:
             prevGuild = self._claims[claim]["guild"]
@@ -61,6 +62,7 @@ class ClaimTracker(commands.Cog):
             if prevGuild != currGuild:
                 if currGuild == "HackForums":
                     emoji = "🛡️"
+                    isClaimReclaimed = True
                 elif prevGuild == "HackForums":
                     emoji = "⚔️"
                 else:
@@ -73,7 +75,7 @@ class ClaimTracker(commands.Cog):
         
         self._order_claim_names()
 
-        if isClaimAttacked:
+        if isClaimAttacked and not isClaimReclaimed:
             if not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
                 return
@@ -211,3 +213,6 @@ class ClaimTracker(commands.Cog):
         text = f"Successfully removed {len(validTerrs)} claims."
         subText = f"Ignored {len(invalidTerrs)} claims." if invalidTerrs else None
         await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_SUCCESS))
+    
+    async def get_alert_status(self, ctx: commands.Context):
+        pass
