@@ -48,7 +48,6 @@ class ClaimTracker(commands.Cog):
     @tasks.loop(seconds=CLAIM_UPDATE_INTERVAL)
     async def _claim_update(self):
         claimList = self._terrListTracker.getData()
-        print(claimList)
         if not claimList:
             return
         claimList = claimList["territories"]
@@ -209,7 +208,6 @@ class ClaimTracker(commands.Cog):
             return
 
         terrs = set(terrs)
-        print(self._allTerrs)
         validTerrs = terrs.intersection(self._allTerrs)
 
         if not validTerrs:
