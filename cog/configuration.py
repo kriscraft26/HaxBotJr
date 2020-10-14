@@ -82,7 +82,7 @@ class Configuration(commands.Cog):
         if not id_:
             return
         channel = self.bot.get_channel(id_)
-        await channel.send(text, **kwargs)
+        return await channel.send(text, **kwargs)
 
     def is_of_group(self, groupName: str, member: Member) -> bool:
         rank = self.get_rank(member)
