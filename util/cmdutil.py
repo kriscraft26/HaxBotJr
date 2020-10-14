@@ -17,6 +17,7 @@ class CatchableArgumentParser(ArgumentParser):
 ["arg..."]                  flag extend argument
 "-arg"                      store argument
 ["arg", ("choice", ...)]    choice argument
+"arg*"                      optional positional argument
 """
 def parser(name, *args, isGroup=False, parent=None, **destMap):
     argParser = CatchableArgumentParser(prog=f"]{name}", add_help=False)
@@ -33,6 +34,9 @@ def parser(name, *args, isGroup=False, parent=None, **destMap):
                 arg = arg[1:]
                 argParser.add_argument(
                     f"-{arg[0]}", f"--{arg}", action="store", dest=destMap.pop(arg, arg))
+            elif arg[-1] == "*":
+                arg = arg[:-1]
+                argParser.add_argument(arg, nargs="*")
             #  "arg"
             else:
                 argParser.add_argument(dest=destMap.pop(arg, arg))

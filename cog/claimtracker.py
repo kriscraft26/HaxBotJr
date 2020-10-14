@@ -45,7 +45,7 @@ class ClaimTracker(commands.Cog):
 
         self._claim_update.start()
 
-    @tasks.loop(seconds=CLAIM_UPDATE_INTERVAL)
+    @tasks.loop(minutes=CLAIM_UPDATE_INTERVAL)
     async def _claim_update(self):
         claimList = self._terrListTracker.getData()
         if not claimList:
