@@ -14,7 +14,7 @@ from cog.configuration import Configuration
 
 
 CLAIM_UPDATE_INTERVAL = 6
-CLAIM_ALERT_DElAY = 5  # in minutes
+CLAIM_ALERT_DElAY = 6  # in minutes
 
 
 @DataManager.register("_claims")
@@ -30,7 +30,11 @@ class ClaimTracker(commands.Cog):
         self._terrListTracker = wynnAPI.terrList.get_tracker()
 
         self._hasInitClaimUpdate = False
-        self._shouldAlert = False
+        # 0 = not scheduled
+        # 1 = scheduled
+        # 2 = active
+        self._alertStatus = 0
+        self._alertStatusMsg = None
 
         self.bot = bot
     
@@ -80,7 +84,7 @@ class ClaimTracker(commands.Cog):
             if not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
                 return
-        self.dismiss_alert()
+        await self.dismiss_alert()
     
     @_claim_update.before_loop
     async def _before_claim_update(self):
@@ -88,19 +92,30 @@ class ClaimTracker(commands.Cog):
         Logger.bot.debug("starting claim update loop")
     
     def schedule_alert(self):
-        if self._config("role.claimAlert") and not self._alert.is_running():
-            self._alert.start()
+        if self._config("role.claimAlert") and not self._alertStatus:
+            Logger.bot.info(f"claim alert is scheduled")
+            if self._alert.is_running():
+                self._alert.restart()
+            else:
+                self._alert.start()
     
-    def dismiss_alert(self):
-        if self._alert.is_running():
-            self._shouldAlert = False
-            self._alert.stop()
-    
+    async def dismiss_alert(self):
+        if self._alertStatus:
+            Logger.bot.info(f"claim alert is canceled")
+            self._alertStatus = 0
+            if self._alert.is_running():
+                self._alert.stop()
+            if self._alertStatusMsg:
+                text = "👌 *the situation has been taken care of.*"
+                await self._alertStatusMsg.edit(content=text)
+                self._alertStatusMsg = None
+
     @tasks.loop(minutes=CLAIM_ALERT_DElAY)
     async def _alert(self):
-        if not self._shouldAlert:
-            self._shouldAlert = True
+        if not self._alertStatus:
+            self._alertStatus = 1
             return
+        self._alertStatus = 2
         
         isMissing = lambda t: self._claims[t]["guild"] != "HackForums"
         missing = list(filter(isMissing, self._claimNameOrder))
@@ -126,7 +141,9 @@ class ClaimTracker(commands.Cog):
             text += "\n" + decorate_text("\n".join(entries))
 
             await self._config.send("claimAlert", text)
-        self._shouldAlert = False
+
+            statusText = "*Please reclaim our missing territories.*"
+            self._alertStatusMsg = await self._config.send("claimAlert", statusText)
         self._alert.stop()
     
     def _parse_acquired(self, acquired):
@@ -215,13 +232,22 @@ class ClaimTracker(commands.Cog):
         subText = f"Ignored {len(invalidTerrs)} claims." if invalidTerrs else None
         await ctx.send(embed=make_alert(text, subtext=subText, color=COLOR_SUCCESS))
 
-    @parser("claim alertStatus", parent=display_claims)
+    @parser("claim alert", parent=display_claims, isGroup=True)
     async def get_alert_status(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await self._config.perm_check(ctx, "group.trusted"):
             return
-        time = self._alert.next_iteration
-        if time:
-            text = f"`Alert is scheduled at {self._alert.next_iteration}`"
-        else:
-            text = f"`Alert is not scheduled`"
-        await ctx.send(text)
+        text = ["not scheduled", "scheduled", "active"][self._alertStatus]
+        if self._alertStatus == 1:
+            dt = self._alert.next_iteration - now()
+            seconds = trunc(dt.seconds)
+            minutes = seconds // 60
+            seconds = seconds % 60
+            text += f", active in {minutes} minutes {seconds} seconds"
+        await ctx.send(f"`Alert is {text}.`")
+    
+    @parser("claim alert cancel", parent=get_alert_status)
+    async def cancel_alert(self, ctx: commands.Context):
+        if not await self._config.perm_check(ctx, "group.trusted"):
+            return
+        await self.dismiss_alert()
+        await ctx.message.add_reaction("✅")
