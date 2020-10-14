@@ -337,6 +337,8 @@ class MemberManager(commands.Cog):
 
     @parser("members missing", "-snap", parent=display_members)
     async def display_missing_members(self, ctx: commands.Context, snap):
+        if not await self._config.perm_check(ctx, "group.staff"):
+            return
         if snap:
             text = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
                 "MemberManager", "members.missing")
