@@ -1,6 +1,6 @@
 from random import choice
 
-from discord import Message, TextChannel
+from discord import Message, TextChannel, AllowedMentions
 from discord.ext import commands
 from discord.utils import find
 
@@ -29,11 +29,13 @@ class Misc(commands.Cog):
             files.append(await attachment.to_file())
 
         embedNum = len(msg.embeds)
+        mention = AllowedMentions(everyone=False, users=False, roles=False)
         
         if embedNum == 1:
-            await ctx.send(content=msg.content, files=files, embed=msg.embeds[0])
+            await ctx.send(content=msg.content, files=files, embed=msg.embeds[0], 
+                allowed_mentions=mention)
         else:
-            await ctx.send(content=msg.content, files=files)
+            await ctx.send(content=msg.content, files=files, allowed_mentions=mention)
             if embedNum:
                 for embed in msg.embeds:
                     await ctx.send(embed=embed)
