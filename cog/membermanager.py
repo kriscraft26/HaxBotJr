@@ -16,19 +16,19 @@ from cog.snapshotmanager import SnapshotManager
 
 class GuildMember:
 
-    def __init__(self, dMember: Member, rank: str, vRank: str):
+    def __init__(self, dMember: Member, rank: str, vRank: str, ign: str, mcId: str):
         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
         self.id: int = dMember.id
+        self.mcId = mcId
         self.discord = str(dMember)
 
-        seg = dMember.nick.split(" ")
         self.rank = rank
-        self.vRank = None
-        self.ign: str = seg[-1]
+        self.vRank = vRank
+        self.ign = ign
 
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "vRank"]
+        properties = ["ign", "discord", "rank", "vRank", "id", "mcId"]
         for p in properties:
             if hasattr(self, p):
                 s += f" {p}={getattr(self, p)}"
@@ -56,8 +56,8 @@ class MemberManager(commands.Cog):
 
         self.hasInitMembersUpdate = False
 
-        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
+        self._wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
+        self._guildStatsTracker = self._wynnAPI.guildStats.get_tracker()
         self._igMembers: Set[str] = set()
         self._config: Configuration = bot.get_cog("Configuration")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
@@ -70,6 +70,12 @@ class MemberManager(commands.Cog):
         self._ig_members_update.start()
         self._member_deletion.start()
         LeaderBoard.init_lb(self.members.keys())
+
+        if self.members:
+            sample = list(self.members.values())[0]
+            if not hasattr(sample, "mcId"):
+                for m in self.members.values():
+                    m.mcId = None
     
     def __snap__(self):
         return {
@@ -89,7 +95,7 @@ class MemberManager(commands.Cog):
         self._igMembers = {m["name"] for m in guildStats["members"]}
 
         if not self.hasInitMembersUpdate:
-            self._bulk_update_members()
+            await self._bulk_update_members()
             self.hasInitMembersUpdate = True
         else:
             trackedIgns = self.get_igns_set()
@@ -137,7 +143,7 @@ class MemberManager(commands.Cog):
         if isGMemberBefore and not isGMemberAfter:
             self._remove_member(self.members[after.id])
         elif not isGMemberBefore and isGMemberAfter:
-            self._update_guild_info(self._add_member(after), after)
+            self._update_guild_info(await self._add_member(after), after)
         elif isGMemberBefore and isGMemberAfter:
             self._update_guild_info(self.members[before.id], after)
     
@@ -184,7 +190,7 @@ class MemberManager(commands.Cog):
         
         gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
-    def _bulk_update_members(self):
+    async def _bulk_update_members(self):
         currGuildDMembers = self._config.get_all_guild_members()
         currGuildDMembers = {m.id: m for m in currGuildDMembers}
 
@@ -194,7 +200,7 @@ class MemberManager(commands.Cog):
         joined = currGuildMemberIds.difference(prevGuildMemberIds)
         for id_ in joined:
             dMember = currGuildDMembers[id_]
-            self._add_member(dMember)
+            await self._add_member(dMember)
 
             ign = dMember.nick.split(" ")[-1]
             if ign not in self._igMembers:
@@ -216,7 +222,7 @@ class MemberManager(commands.Cog):
             elif ign not in self._igMembers and id_ not in self.idleMembers:
                 self._mark_idle(id_)
     
-    def _add_member(self, dMember: Member):
+    async def _add_member(self, dMember: Member):
         id_ = dMember.id
         if id_ in self._removedMembers:
             gMember, statsInfo = self._removedMembers[id_]
@@ -228,7 +234,14 @@ class MemberManager(commands.Cog):
 
             LeaderBoard.force_add_entry(id_, statsInfo)
         else:
-            gMember = GuildMember(dMember, *(self._config.get_rank(dMember)))
+            ranks = self._config.get_rank(dMember)
+            ign = dMember.nick.split(" ")[-1]
+            mcId = await self._wynnAPI.get_player_id(ign)
+            if mcId:
+                mcId = mcId["data"][0]["uuid"]
+            else:
+                Logger.bot.warning(f"unable to find mc uuid of {ign}")
+            gMember = GuildMember(dMember, *ranks, ign, mcId)
         
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
