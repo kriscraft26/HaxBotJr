@@ -1,4 +1,3 @@
-import requests
 import aiohttp
 from typing import Union
 from datetime import timedelta, datetime
@@ -9,7 +8,8 @@ from util.timeutil import now
 from logger import Logger
 
 
-LEGACY_URL_HEADER = "https://api.wynncraft.com/public_api.php"
+LEGACY_URL_BASE = "https://api.wynncraft.com/public_api.php"
+V2_URL_BASE = "https://api.wynncraft.com/v2/" 
 UPDATE_INTERVAL = 3  # Number of seconds between each update() call.
 
 
@@ -47,6 +47,22 @@ class WynnAPI(commands.Cog):
     async def _before_update(self):
         await self.bot.wait_until_ready()
         Logger.bot.debug("Starting Wynncraft API update loop")
+    
+    async def get_player_stats(self, mcId):
+        async with self._session.get(f"{V2_URL_BASE}player/{mcId}/stats") as resp:
+            if resp.status != 200:
+                Logger.bot.warning(
+                    f"failed request player stat of {mcId} with {resp.status}")
+                return None
+            return await resp.json()
+    
+    async def get_player_id(self, ign):
+        async with self._session.get(f"{V2_URL_BASE}player/{ign}/uuid") as resp:
+            if resp.status != 200:
+                Logger.bot.warning(
+                    f"failed request player id of {ign} with {resp.status}")
+                return None
+            return await resp.json()
 
 
 class WynnData:
@@ -64,13 +80,13 @@ class WynnData:
 
     def __init__(self, **params):
         self._data: dict = None
-        self.url = LEGACY_URL_HEADER
+        self.url = LEGACY_URL_BASE
         self.params = params
     
     async def _update(self, session: aiohttp.ClientSession):
         async with session.get(self.url, params=self.params) as resp:
             if resp.status != 200:
-                Logger.bot.warning(f"failed GET {self.url}, status code: {resp.status}")
+                Logger.bot.warning(f"failed request {self.params} with {resp.status}")
                 return
             self._data = await resp.json()
     
