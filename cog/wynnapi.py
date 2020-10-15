@@ -15,6 +15,7 @@ UPDATE_INTERVAL = 3  # Number of seconds between each update() call.
 
 
 MOJANG_UUID_URL = "https://api.mojang.com/users/profiles/minecraft/%s?at=%s"
+MOJANG_IGN_URL = "https://api.mojang.com/user/profiles/%s/names"
 
 
 class WynnAPI(commands.Cog):
@@ -53,6 +54,10 @@ class WynnAPI(commands.Cog):
         Logger.bot.debug("Starting Wynncraft API update loop")
     
     async def get_player_stats(self, mcId):
+        mcId = list(mcId)
+        for i in [8, 13, 18, 23]:
+            mcId.insert(i, "-")
+        mcId = "".join(mcId)
         async with self._session.get(f"{V2_URL_BASE}player/{mcId}/stats") as resp:
             if resp.status != 200:
                 Logger.bot.warning(
@@ -67,10 +72,15 @@ class WynnAPI(commands.Cog):
                 Logger.bot.warning(
                     f"failed request player id of {ign} with {resp.status}")
                 return None
-            id_ = list((await resp.json())["id"])
-            for i in [8, 13, 18, 23]:
-                id_.insert(i, "-")
-            return "".join(id_)
+            return (await resp.json())["id"]
+    
+    async def get_player_ign(self, mcId):
+        async with self._session.get(MOJANG_IGN_URL % mcId) as resp:
+            if resp.status != 200:
+                Logger.bot.warning(
+                    f"failed request player ign of {mcId} with {resp.status}")
+                return None
+            return await resp.json()
 
 
 class WynnData:
