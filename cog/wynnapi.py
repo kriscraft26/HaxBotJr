@@ -1,6 +1,7 @@
 import aiohttp
 from typing import Union
 from datetime import timedelta, datetime
+from time import time
 
 from discord.ext import tasks, commands
 
@@ -11,6 +12,9 @@ from logger import Logger
 LEGACY_URL_BASE = "https://api.wynncraft.com/public_api.php"
 V2_URL_BASE = "https://api.wynncraft.com/v2/" 
 UPDATE_INTERVAL = 3  # Number of seconds between each update() call.
+
+
+MOJANG_UUID_URL = "https://api.mojang.com/users/profiles/minecraft/%s?at=%s"
 
 
 class WynnAPI(commands.Cog):
@@ -57,12 +61,16 @@ class WynnAPI(commands.Cog):
             return await resp.json()
     
     async def get_player_id(self, ign):
-        async with self._session.get(f"{V2_URL_BASE}player/{ign}/uuid") as resp:
+        timestamp = int(time())
+        async with self._session.get(MOJANG_UUID_URL % (ign, timestamp)) as resp:
             if resp.status != 200:
                 Logger.bot.warning(
                     f"failed request player id of {ign} with {resp.status}")
                 return None
-            return await resp.json()
+            id_ = list((await resp.json())["id"])
+            for i in [8, 13, 18, 23]:
+                id_.insert(i, "-")
+            return "".join(id_)
 
 
 class WynnData:
