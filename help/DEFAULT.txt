@@ -36,6 +36,7 @@ S#Configuration=
 #Misc and Utility=
 `now`: display internal date/time, and day of bi-week.
 `snap`: display list of available snapshots.
+`quote`: 😳😋🥛🍆🦶
 
 
 note that the list will display differently depends on the rank of the caller.
