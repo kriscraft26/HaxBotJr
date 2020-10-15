@@ -22,6 +22,7 @@ from cog.emeraldtracker import EmeraldTracker
 from cog.snapshotmanager import SnapshotManager
 from cog.claimtracker import ClaimTracker
 from cog.help import Help
+from cog.misc import Misc
 
 class HaxBotJr(commands.Bot):
 
@@ -49,6 +50,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DateClock(self))
         self.add_cog(DataManager(self))
         self.add_cog(Help(self))
+        self.add_cog(Misc(self))
 
     @classmethod
     def exit(cls):
