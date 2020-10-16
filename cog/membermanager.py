@@ -1,4 +1,5 @@
 from typing import Dict, List, Callable, Set
+from asyncio import sleep
 
 from discord import Member, Embed, User
 from discord.ext import tasks, commands
@@ -28,7 +29,7 @@ class GuildMember:
 
     def __repr__(self):
         s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "vRank", "id", "mcId"]
+        properties = ["ign", "discord", "rank", "vRank", "mcId"]
         for p in properties:
             if hasattr(self, p):
                 s += f" {p}={getattr(self, p)}"
@@ -237,9 +238,7 @@ class MemberManager(commands.Cog):
             ranks = self._config.get_rank(dMember)
             ign = dMember.nick.split(" ")[-1]
             mcId = await self._wynnAPI.get_player_id(ign)
-            if mcId:
-                mcId = mcId["data"][0]["uuid"]
-            else:
+            if not mcId:
                 Logger.bot.warning(f"unable to find mc uuid of {ign}")
             gMember = GuildMember(dMember, *ranks, ign, mcId)
         
@@ -366,5 +365,5 @@ class MemberManager(commands.Cog):
         if not await self._config.perm_check(ctx, "user.dev"):
             return
         for member in self.members.values():
-            if member.rank == "Commander":
-                member.rank = "Cosmonaut"
+            member.mcId = await self._wynnAPI.get_player_id(member.ign)
+            await sleep(0.2)
