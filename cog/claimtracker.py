@@ -84,8 +84,7 @@ class ClaimTracker(commands.Cog):
         self._order_claim_names()
 
         if isClaimAttacked:
-            if isClaimChanged:
-                await self.update_alert()
+            await self.update_alert()
             if not isClaimReclaimed and not self.bot.get_cog("WarTracker").currentWar:
                 self.schedule_alert()
                 return
