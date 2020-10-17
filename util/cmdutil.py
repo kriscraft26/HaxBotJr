@@ -15,8 +15,9 @@ class CatchableArgumentParser(ArgumentParser):
 ["arg"]                     flag argument
 "arg..."                    extend argument
 ["arg..."]                  flag extend argument
-"-arg"                      store argument
+"-arg"                      flag argument
 ["arg", ("choice", ...)]    choice argument
+[["arg"], ("choice", ...)]  flag choice argument
 "arg*"                      optional positional argument
 """
 def parser(name, *args, isGroup=False, parent=None, **destMap):
@@ -51,10 +52,16 @@ def parser(name, *args, isGroup=False, parent=None, **destMap):
                 else:
                     argParser.add_argument(f"-{arg[0]}", f"--{arg}", 
                         action="store_true", dest=destMap.pop(arg, arg))
-            #  ["arg", ("choice", ...)]
             elif len(arg) == 2:
                 [arg, choices] = arg
-                argParser.add_argument(arg, choices=choices)
+                #  ["arg", ("choice", ...)]
+                if type(arg) == str:
+                    argParser.add_argument(arg, choices=choices)
+                #  [["arg"], ("choice", ...)]
+                elif type(arg) == list:
+                    arg = arg[0]
+                    argParser.add_argument(f"-{arg[0]}", f"--{arg}", choices=choices,
+                        dest=destMap.pop(arg, arg))
     def wrapper(func):
         p = parent if parent else commands
         funcName = name.split(" ")[-1]
