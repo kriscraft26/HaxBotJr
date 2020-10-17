@@ -23,6 +23,7 @@ from cog.snapshotmanager import SnapshotManager
 from cog.claimtracker import ClaimTracker
 from cog.help import Help
 from cog.misc import Misc
+from cog.votation import Votation
 
 class HaxBotJr(commands.Bot):
 
@@ -51,6 +52,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataManager(self))
         self.add_cog(Help(self))
         self.add_cog(Misc(self))
+        self.add_cog(Votation(self))
 
     @classmethod
     def exit(cls):
