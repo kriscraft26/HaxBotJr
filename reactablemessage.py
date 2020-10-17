@@ -129,9 +129,12 @@ class ConfirmMessage(ReactableMessage):
             await self.cb(self)
         else:
             self.cb(self)
-        alert = make_alert(self.successText, color=COLOR_SUCCESS)
-        await self.edit_message(embed=alert)
-        await self.un_track()
+        if self.successText:
+            alert = make_alert(self.successText, color=COLOR_SUCCESS)
+            await self.edit_message(embed=alert)
+            await self.un_track()
+        else:
+            await self.delete_message()
 
 
 class ListSelectionMessage(PagedMessage):
