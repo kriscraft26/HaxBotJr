@@ -177,10 +177,8 @@ class Configuration(commands.Cog):
             return self.guild.get_member_named(target)
 
     def _config_change_cb(self, cb, logMsg):
-        def callback(msg):
-            cb()
-            Logger.bot.info(logMsg)
-        return callback
+        cb()
+        Logger.bot.info(logMsg)
     
     async def _config_val(self, ctx, name, valGetter, valParser, type_, reset, set_):
         field = name + "." + type_
@@ -224,7 +222,7 @@ class Configuration(commands.Cog):
             logMsg = f"Changed {field} from {prev} to {val} by {ctx.author}"
         
         await ConfirmMessage(
-            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
+            ctx, text, successText, self._config_change_cb, cb, logMsg).init()
 
     @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog", 
         "claimAlert")], ["reset"], "-set", parent=display_config, type="type_", set="set_")
@@ -283,7 +281,7 @@ class Configuration(commands.Cog):
             logMsg = f"Added {user} to {field} by {ctx.author}"
         
         await ConfirmMessage(
-            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
+            ctx, text, successText, self._config_change_cb, cb, logMsg).init()
 
     @parser("config vrole", ["type", ("visual", "personal")], "-entry", "-remove", "-add",
         parent=display_config, type="type_", entry="role")
@@ -361,4 +359,4 @@ class Configuration(commands.Cog):
                 logMsg = f"Added {item} entry to {field} by {ctx.author}"
         
         await ConfirmMessage(
-            ctx, text, successText, self._config_change_cb(cb, logMsg)).init()
+            ctx, text, successText, self._config_change_cb, cb, logMsg).init()

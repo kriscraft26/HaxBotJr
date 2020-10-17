@@ -20,9 +20,9 @@ class ReactableMessage:
         self.channel = channel
         self.track = track
     
-    async def add_callback(self, reaction, cb, provideSelf=False):
+    async def add_callback(self, reaction, cb, *args, **kwargs):
         override = reaction in self._reactions
-        self._reactions[reaction] = (cb, provideSelf)
+        self._reactions[reaction] = (cb, args, kwargs)
         if self.msg and not override:
             await self.msg.add_reaction(reaction)
     
@@ -73,11 +73,11 @@ class ReactableMessage:
                 if msg.userId and user.id != msg.userId:
                     return
                 if reaction.emoji in msg._reactions:
-                    (cb, provideSelf) = msg._reactions[reaction.emoji]
+                    (cb, args, kwargs) = msg._reactions[reaction.emoji]
                     if iscoroutinefunction(cb):
-                        await cb(msg) if provideSelf else await cb()
+                        await cb(*args, **kwargs)
                     else:
-                        cb(msg) if provideSelf else cb()
+                        cb(*args, **kwargs)
                     return
 
 
@@ -111,11 +111,13 @@ class PagedMessage(ReactableMessage):
 
 class ConfirmMessage(ReactableMessage):
 
-    def __init__(self, ctx: Context, text, successText, cb):
+    def __init__(self, ctx: Context, text, successText, cb, *args, **kwargs):
         super().__init__(ctx.channel, userId=ctx.author.id)
         self.text = text
         self.successText = successText
         self.cb = cb
+        self.args = args
+        self.kwargs = kwargs
         self.isCoroutine = iscoroutinefunction(cb)
 
     async def _init_send(self):
@@ -126,9 +128,9 @@ class ConfirmMessage(ReactableMessage):
     
     async def _on_confirm(self):
         if self.isCoroutine:
-            await self.cb(self)
+            await self.cb(*self.args, **self.kwargs)
         else:
-            self.cb(self)
+            self.cb(*self.args, **self.kwargs)
         if self.successText:
             alert = make_alert(self.successText, color=COLOR_SUCCESS)
             await self.edit_message(embed=alert)
@@ -141,7 +143,7 @@ class ListSelectionMessage(PagedMessage):
 
     numEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
-    def __init__(self, ctx: Context, entries: List[str], cb):
+    def __init__(self, ctx: Context, entries: List[str], cb, *args, **kwargs):
         entryPages = slice_entries(entries, maxEntries=5)
         pageNum = len(entryPages)
         pages = [
@@ -150,6 +152,8 @@ class ListSelectionMessage(PagedMessage):
         self.entryPages = entryPages
         isCoroutine = iscoroutinefunction(cb)
         self.cbs = [self._wrap_cb(i, cb, isCoroutine) for i in range(5)]
+        self.args = args
+        self.kwargs = kwargs
     
     async def _init_send(self):
         msg = await super()._init_send()
@@ -163,12 +167,12 @@ class ListSelectionMessage(PagedMessage):
             async def wrapped_cb():
                 entries = self.entryPages[self.index]
                 if i < len(entries):
-                    await cb(self, self.entryPages[self.index][i])
+                    await cb(self, self.entryPages[self.index][i], *self.args, **self.kwargs)
         else:
             def wrapped_cb():
                 entries = self.entryPages[self.index]
                 if i < len(entries):
-                    cb(self, self.entryPages[self.index][i])
+                    cb(self, self.entryPages[self.index][i], *self.args, **self.kwargs)
         return wrapped_cb
 
     def _make_page(self, entries: List[str], pageNum, pageIndex):
