@@ -1,0 +1,16 @@
+restriction: chief+
+
+
+`vote binary [-d|--default {yes|no}]`
+
+Start a yes and no vote.
+
+If default is specified, it will be all expeditioner's vote until they have explicitly voted.
+
+
+Examples=
+`vote binary`
+`vote binary -d yes`
+
+
+NONE

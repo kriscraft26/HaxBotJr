@@ -1,0 +1,28 @@
+restriction: chief+
+
+
+`vote consensus`
+
+Start a consensus vote. Assent is the default vote.
+
+
+Vote Types=
+__Assent__: Agree on the proposal.
+__Reserve__: Disagree on the proposal but willing to let it pass.
+__Dissent__: Disagree on the proposal.
+__Object__: STRONGLY disagree on the proposal, that can't be compromised.
+__Stand aside__: neutral vote, this vote should be casted if you feel that you are incapable of adequately understanding or participating in the proposal.
+
+
+Object is not Veto=
+The ethics of consensus decision-making encourage expeditioners to place the good of the whole group above their own individual preferences, 
+so cast object vote thoughtfully and justified!
+
+
+Results and Conditions=
+__Pass__: 0 - 1 Object and 0 Dissent
+__Failed__: 1 or more Dissent
+__Rejected__: 2 or more Object
+
+
+NONE

@@ -1,0 +1,14 @@
+restriction: chief+
+
+
+`vote end [-a|--anonymous]`
+
+End currently active vote, and display the result. If anonymous flag is specified, name of the voters won't be displayed.
+
+
+Examples=
+`vote end`
+`vote end -a`
+
+
+NONE

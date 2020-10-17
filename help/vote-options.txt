@@ -1,0 +1,18 @@
+restriction: chief+
+
+
+`vote options [options ...] [-d DEFAULT]`
+
+Start a vote on list of options.
+
+If there is a space in an option, wrap it with `"`, for example `"apple pie"`.
+
+If default is specified, it will be all expeditioner's vote until they have explicitly voted.
+
+
+Examples=
+`vote options apple banana`
+`vote options apple banana -d apple`
+
+
+NONE

@@ -33,6 +33,13 @@ S#Configuration=
 `config vrole {NAME} [-e VROLE] [-r ITEM] [-a ITEM]`: display and change vrole.* fields.
 
 
+Votation=
+`vote binary [-d {yes|no}]`: start a yes and no vote.
+`vote options [options ...] [-d DEFAULT]`: start a vote on list of options.
+`vote consensus`: start a consensus vote.
+`vote end [-a]`: end currently active vote. 
+
+
 #Misc and Utility=
 `now`: display internal date/time, and day of bi-week.
 `snap`: display list of available snapshots.
