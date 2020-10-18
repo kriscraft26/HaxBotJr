@@ -43,7 +43,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(WynnAPI(self, HaxBotJr.session))
         self.add_cog(SnapshotManager(self))
         self.add_cog(DataManager.load(MemberManager(self)))
-        self.add_cog(DataManager.load(XPTracker(self)))
+        self.add_cog(XPTracker(self))
         self.add_cog(DataManager.load(WarTracker(self)))
         self.add_cog(DataManager.load(EmeraldTracker(self)))
         self.add_cog(DataManager.load(ClaimTracker(self)))

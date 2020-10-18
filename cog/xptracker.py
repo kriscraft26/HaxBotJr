@@ -16,7 +16,6 @@ XP_UPDATE_INTERVAL = 6
 XP_LOG_INTERVAL = 5  # in minutes
 
 
-@DataManager.register("_prevTXp")
 class XPTracker(commands.Cog):
     XP_RESET_THRESHOLD = 10000
 
@@ -31,7 +30,6 @@ class XPTracker(commands.Cog):
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
         self._lastLoggedVal = {}
-        self._prevXp = {}
 
         self._update.start()
         self._xp_log.start()
@@ -52,12 +50,7 @@ class XPTracker(commands.Cog):
         for memberData in guildStats["members"]:
             if memberData["name"] in trackedIgns:
                 id_ = self._memberManager.ignIdMap[ memberData["name"]]
-                prevXp = self._prevXp.get(id_, -1)
-                currXp = self._lb.get_stat(id_)
-                newXp = memberData["contributed"]
-                if prevXp != newXp:
-                    self._lb.set_stat(id_, newXp)
-                self._prevXp[id_] = currXp
+                self._lb.set_stat(id_,  memberData["contributed"])
     
     @_update.before_loop
     async def _before_update(self):
