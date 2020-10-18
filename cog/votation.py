@@ -6,6 +6,7 @@ from discord import TextChannel, Member, Message, Reaction, Emoji, Embed
 from discord.ext import commands
 from discord.utils import find
 
+from logger import Logger
 from msgmaker import make_alert, COLOR_INFO, decorate_text
 from reactablemessage import ConfirmMessage
 from util.cmdutil import parser
@@ -22,13 +23,13 @@ class Votation(commands.Cog):
         self.voteMsg: Message = None
         self.expeditioners: Set[int] = set()
         self.options: Dict[str, str] = {}
-        self.vote: Dict[str, str] = {}
+        self.vote: Dict[int, str] = {}
         self.default: str = None
 
         self.bot = bot
 
     def _find_expeditioners(self, channel: TextChannel) -> Set[int]:
-        return list(map(lambda m: m.id, filter(self._is_expeditioner, channel.members)))
+        return set(map(lambda m: m.id, filter(self._is_expeditioner, channel.members)))
     
     def _is_expeditioner(self, member: Member) -> bool:
         return bool(find(lambda r: r.name == "Expeditioner", member.roles))
@@ -97,11 +98,14 @@ class Votation(commands.Cog):
 
         message: Message = reaction.message
         if message.id != self.voteMsg.id:
+            Logger.bot.debug(f"[DEBUG] different message {message.id} != {self.voteMsg.id}")
             return
         if member.id not in self.expeditioners:
+            Logger.bot.debug(f"[DEBUG] not expeditioner {member}")
             return
         
         emoji = reaction.emoji
+        Logger.bot.debug(f"[DEBUG] add vote {emoji} from {member}, {message.reactions}")
         await message.remove_reaction(emoji, member)
         if emoji in self.options:
             self.vote[member.id] = emoji
@@ -111,7 +115,19 @@ class Votation(commands.Cog):
     async def on_member_update(self, before: Member, after: Member):
         if not self.voteMsg:
             return
-        if self._is_expeditioner(before) ^ self._is_expeditioner(after):
+        
+        id_ = after.id
+        isBefore = self._is_expeditioner(before)
+        isAfter = self._is_expeditioner(after)
+
+        if isBefore and not isAfter:
+            self.expeditioners.remove(id_)
+            del self.vote[id_]
+        elif not isBefore and isAfter:
+            self.expeditioners.add(id_)
+            self.vote[id_] = None
+
+        if isBefore ^ isAfter:
             await self._update_member_msg()
     
     @parser("vote", isGroup=True)
