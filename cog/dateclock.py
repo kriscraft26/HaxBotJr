@@ -11,6 +11,7 @@ import util.timeutil as timeutil
 from cog.remotedebugger import RemoteDebugger
 from cog.snapshotmanager import SnapshotManager
 from cog.configuration import Configuration
+from cog.activitytracker import ActivityTracker
 
 
 class DateClock(commands.Cog):
@@ -26,6 +27,7 @@ class DateClock(commands.Cog):
         self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
         self._config: Configuration = bot.get_cog("Configuration")
+        self._actTracker: ActivityTracker = bot.get_cog("ActivityTracker")
 
         self._update_loop_interval()
         self._daily_loop.start()
@@ -56,6 +58,7 @@ class DateClock(commands.Cog):
         self._snapshotManager.save_snapshot()
         await self._config.send("bwReport", LeaderBoard.get_lb("xp").create_bw_report())
         LeaderBoard.reset_all_bw()
+        self._actTracker.biweekly_reset()
 
     def _update_loop_interval(self):
         now = timeutil.now()

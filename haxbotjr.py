@@ -24,6 +24,7 @@ from cog.claimtracker import ClaimTracker
 from cog.help import Help
 from cog.misc import Misc
 from cog.votation import Votation
+from cog.activitytracker import ActivityTracker
 
 class HaxBotJr(commands.Bot):
 
@@ -47,6 +48,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(DataManager.load(WarTracker(self)))
         self.add_cog(DataManager.load(EmeraldTracker(self)))
         self.add_cog(DataManager.load(ClaimTracker(self)))
+        self.add_cog(DataManager.load(ActivityTracker(self)))
         self.add_cog(RemoteDebugger(self))
         self.add_cog(DateClock(self))
         self.add_cog(DataManager(self))
