@@ -49,7 +49,7 @@ class ReactableMessage:
         if self.track:
             ReactableMessage.activeMsg.remove(self)
             for reaction in self._reactions:
-                await sleep(0.25)
+                await sleep(0.5)
                 await self.msg.remove_reaction(reaction, self.msg.author)
     
     async def edit_message(self, **editArgs):
