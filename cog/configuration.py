@@ -26,7 +26,9 @@ class Configuration(commands.Cog):
         "channel.memberLog": None,
         "channel.claimLog": None,
         "channel.claimAlert": None,
-        "role.claimAlert": None
+        "channel.expedition": None,
+        "role.claimAlert": None,
+        "role.expedition": None
     }
 
     def __init__(self, bot: commands.Bot):
@@ -93,6 +95,10 @@ class Configuration(commands.Cog):
     
     def is_of_user(self, userName: str, member: Member) -> bool:
         return member.id in self._config[f"user.{userName}"]
+    
+    def has_role(self, roleName: str, member: Member) -> bool:
+        id_ = self._config[f"role.{roleName}"]
+        return bool(find(lambda r: r.id == id_, member.roles))
 
     def get_rank(self, member: Member) -> Union[None, Tuple[str, str]]:
         if self.is_of_user("ignore", member):
@@ -224,14 +230,15 @@ class Configuration(commands.Cog):
         await ConfirmMessage(
             ctx, text, successText, self._config_change_cb, cb, logMsg).init()
 
-    @parser("config channel", ["type", ("xpLog", "bwReport", "memberLog", "claimLog", 
-        "claimAlert")], ["reset"], "-set", parent=display_config, type="type_", set="set_")
+    @parser("config channel", ["type", 
+        ("xpLog", "bwReport", "memberLog", "claimLog", "claimAlert", "expedition")], 
+        ["reset"], "-set", parent=display_config, type="type_", set="set_")
     async def config_channel(self, ctx: commands.Context, type_, reset, set_):
         getter = self.guild.get_channel
         parser = self.parse_channel
         await self._config_val(ctx, "channel", getter, parser, type_, reset, set_)
 
-    @parser("config role", ["type", ("claimAlert")], ["reset"], "-set", 
+    @parser("config role", ["type", ("claimAlert", "expedition")], ["reset"], "-set", 
         parent=display_config, type="type_", set="set_")
     async def config_role(self, ctx, type_, reset, set_):
         getter = self.guild.get_role
