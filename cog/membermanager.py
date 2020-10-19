@@ -62,6 +62,9 @@ class MemberManager(commands.Cog):
 
         self._snapshotManager.add("MemberManager", self)
 
+        self.memberTrackCbs = set()
+        self.memberUnTrackCbs = set()
+
         self.bot = bot
 
     def __loaded__(self):
@@ -144,12 +147,22 @@ class MemberManager(commands.Cog):
             Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
             member.discord = str(after)
     
+    def add_member_track_cb(self, cb):
+        self.memberTrackCbs.add(cb)
+    
+    def add_member_un_track_cb(self, cb):
+        self.memberUnTrackCbs.add(cb)
+    
     def _mark_idle(self, id_):
         self.idleMembers.add(id_)
+        for cb in self.memberUnTrackCbs:
+            cb(id_)
         Logger.bot.info(f"{self.members[id_].ign} status set to idle")
     
     def _un_mark_idle(self, id_):
         self.idleMembers.remove(id_)
+        for cb in self.memberTrackCbs:
+            cb(id_)
         Logger.bot.info(f"{self.members[id_].ign} status set to active")
 
     def _update_guild_info(self, gMember: GuildMember, dMember: Member):
@@ -230,6 +243,8 @@ class MemberManager(commands.Cog):
         if gMember.ign not in self._igMembers:
             self._mark_idle(id_)
         
+        for cb in self.memberTrackCbs:
+            cb(id_)
         return gMember
     
     def _remove_member(self, gMember: GuildMember):
@@ -242,6 +257,9 @@ class MemberManager(commands.Cog):
 
         self._removedMembers[id_] = (gMember, LeaderBoard.get_entry(id_))
         LeaderBoard.remove_entry(id_)
+
+        for cb in self.memberUnTrackCbs:
+            cb(id_)
 
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
