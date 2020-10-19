@@ -5,7 +5,7 @@ from math import trunc
 from discord.ext import commands, tasks
 
 from logger import Logger
-from msgmaker import make_entry_pages, make_stat_entries
+from msgmaker import make_entry_pages, make_stat_entries, decorate_text
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now as utcNow
@@ -163,6 +163,7 @@ class ActivityTracker(commands.Cog):
                 lb[member.ign] = (member.rank, server, self._format_dt(dt))
         if not lb:
             await ctx.send("`No member is online.`")
+            return
 
         template = "{0:<%d} {1:<%d}  |  {2:<%d} {3}" % (maxRankLen, maxIgnLen, maxServerLen)
 
@@ -170,8 +171,8 @@ class ActivityTracker(commands.Cog):
             entries.append(template.format(rank, ign, server, dt))
         
         dt = self._get_last_update_dt()
-        pages = make_entry_pages(entries, title="Online Members", lastUpdate=dt)
-        await PagedMessage(pages, ctx.channel).init()
+        text = decorate_text("\n".join(entries), title="Online Members", lastUpdate=dt)
+        await ctx.send(text)
     
     def _make_activity_pages(self):
         dt = self._get_last_update_dt()
