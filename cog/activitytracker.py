@@ -84,7 +84,7 @@ class ActivityTracker(commands.Cog):
 
             data = self.activities[id_]
 
-            if data[2] and not server.startswith("lobby"):
+            if data[2]:
                 if isOnline:  # if stays online
                     if not server.startswith("lobby"):
                         data[0] += interval
