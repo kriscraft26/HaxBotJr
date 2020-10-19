@@ -13,6 +13,7 @@ from cog.membermanager import MemberManager
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
 from cog.snapshotmanager import SnapshotManager
+from cog.configuration import Configuration
 
 
 ACTIVITY_UPDATE_INTERVAL = 10  # in minutes
@@ -22,6 +23,7 @@ ACTIVITY_UPDATE_INTERVAL = 10  # in minutes
 class ActivityTracker(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
+        self._config: Configuration = bot.get_cog("Configuration")
         self._snapManager: SnapshotManager = bot.get_cog("SnapshotManager")
         self._memeberManager: MemberManager = bot.get_cog("MemberManager")
         self._wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
@@ -78,19 +80,20 @@ class ActivityTracker(commands.Cog):
 
             playerLocation = stats["data"][0]["meta"]["location"]
             isOnline = playerLocation["online"]
-            world = playerLocation["server"]
+            server = playerLocation["server"]
 
             data = self.activities[id_]
 
-            if data[2]:
+            if data[2] and not server.startswith("lobby"):
                 if isOnline:  # if stays online
-                    data[0] += interval
+                    if not server.startswith("lobby"):
+                        data[0] += interval
                     data[1] += interval
                 else:  # if logs off
                     data[1] = timedelta(seconds=0)
             
             data[2] = isOnline
-            data[3] = world
+            data[3] = server
         
         self._update_lb()
 
@@ -188,7 +191,7 @@ class ActivityTracker(commands.Cog):
 
         return pages
     
-    @parser("act", "-snap")
+    @parser("act", "-snap", isGroup=True)
     async def display_activity(self, ctx: commands.Context, snap):
         if snap:
             pages = await self._snapManager.get_snapshot_cmd(ctx, snap, 
@@ -199,3 +202,10 @@ class ActivityTracker(commands.Cog):
             pages = self._make_activity_pages()
 
         await PagedMessage(pages, ctx.channel).init()
+    
+    @parser("act reset", parent=display_activity)
+    async def reset_activity(self, ctx: commands.Context):
+        if not await self._config.perm_check(ctx, "user.dev"):
+            return
+        self.biweekly_reset()
+        await ctx.message.add_reaction("✅")
