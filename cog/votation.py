@@ -189,9 +189,10 @@ class Vote:
         return s + ">"
 
     def make_vote_embed(self) -> Embed:
+        title = "" if self.target is None else f"target: {self.target}%"
         text = "\n".join([f"{emoji} {s}" for emoji, s in self.options.items()])
         subtext = "default vote: " + self.options[self.default] if self.default else None
-        return make_alert(text, subtext=subtext, color=COLOR_INFO)
+        return make_alert(text, subtext=subtext, title=title, color=COLOR_INFO)
 
     def make_member_embed(self, expeditioners, config: Configuration) -> Embed:
         names = set()
@@ -331,8 +332,9 @@ class BinaryVote(Vote):
         super().__init__(title, options, defaultChoice, target)
     
     def make_vote_embed(self):
+        title = "" if self.target is None else f"target: {self.target}%"
         subtext = "default vote: " + self.options[self.default] if self.default else None
-        return make_alert("Vote here", subtext=subtext, color=COLOR_INFO)
+        return make_alert("Vote here", subtext=subtext, title=title, color=COLOR_INFO)
     
     async def check(self, ctx):
         return True
@@ -357,7 +359,7 @@ class OptionVote(Vote):
 
 class ConsensusVote(Vote):
 
-    def __init__(self, title):
+    def __init__(self, title, target):
         options = {"✅": "Assent", "👌": "Reserve", "👎": "Dissent", 
                    "❌": "Object", "😶": "Stand Aside"}
         super().__init__(title, options, "✅", 100)
