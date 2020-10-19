@@ -43,7 +43,7 @@ class Votation(commands.Cog):
 
         votedCount = 0
         for id_ in self.expeditioners:
-            name = config.guild.get_member(id_).display_name
+            name = config.guild.get_member(id_).display_name.split(" ")[-1]
             if self.vote[id_]:
                 name = f"~~{name}~~"
                 votedCount += 1
