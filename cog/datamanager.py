@@ -1,3 +1,5 @@
+from inspect import iscoroutinefunction
+
 from discord.ext import commands, tasks
 
 from logger import Logger
@@ -31,7 +33,7 @@ class DataManager(commands.Cog):
         return f"./data/{targetCls.__name__}{id_}.data"
 
     @classmethod
-    def load(cls, obj):
+    async def load(cls, obj):
         targetCls = obj.__class__
         dataFile = cls.make_data_file_path(obj)
         Logger.bot.debug(f"loading {dataFile} into {obj}")
@@ -57,7 +59,11 @@ class DataManager(commands.Cog):
             Logger.bot.debug(f"data not found")
         
         if hasattr(obj, "__loaded__"):
-            getattr(obj, "__loaded__")()
+            cb = getattr(obj, "__loaded__")
+            if iscoroutinefunction(cb):
+                await cb()
+            else:
+                cb()
         
         DataManager._classes[targetCls][1].add(obj)
         return obj
