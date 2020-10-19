@@ -37,11 +37,9 @@ class GuildMember:
 
 
 IG_MEMBERS_UPDATE_INTERVAL = 3
-MEMBER_DELETION_INTERVAL = 10  # in minutes
 
 
-@DataManager.register("members", "ignIdMap", "idleMembers", 
-                      "_deletionQueue", "_removedMembers")
+@DataManager.register("members", "ignIdMap", "idleMembers", "_removedMembers")
 class MemberManager(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
@@ -52,7 +50,6 @@ class MemberManager(commands.Cog):
 
         self.idleMembers: Set[int] = set()
 
-        self._deletionQueue: List[int] = []
         self._removedMembers = {}
 
         self.hasInitMembersUpdate = False
@@ -69,7 +66,6 @@ class MemberManager(commands.Cog):
 
     def __loaded__(self):
         self._ig_members_update.start()
-        self._member_deletion.start()
         LeaderBoard.init_lb(self.members.keys())
 
         if self.members:
@@ -123,18 +119,6 @@ class MemberManager(commands.Cog):
     async def _before_ig_members_update(self):
         await self.bot.wait_until_ready()
         Logger.bot.debug("Starting in-game members update loop")
-    
-    @tasks.loop(minutes=MEMBER_DELETION_INTERVAL)
-    async def _member_deletion(self):
-        for id_ in self._deletionQueue:
-            Logger.bot.info(f"deleting {self._removedMembers[id_][0]}")
-            del self._removedMembers[id_]
-        self._deletionQueue = list(self._removedMembers.keys())
-        
-    @_member_deletion.before_loop
-    async def _before_member_deletion(self):
-        await self.bot.wait_until_ready()
-        Logger.bot.debug("Starting member deletion loop")
 
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
@@ -230,8 +214,6 @@ class MemberManager(commands.Cog):
             Logger.bot.info(f"undo removal of {gMember}")
 
             del self._removedMembers[id_]
-            if id_ in self._deletionQueue:
-                self._deletionQueue.remove(id_)
 
             LeaderBoard.force_add_entry(id_, statsInfo)
         else:
