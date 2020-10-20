@@ -12,7 +12,7 @@ from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
 
-XP_UPDATE_INTERVAL = 6
+XP_UPDATE_INTERVAL = 30
 XP_LOG_INTERVAL = 5  # in minutes
 
 
