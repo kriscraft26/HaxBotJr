@@ -2,7 +2,7 @@ from typing import Set, Union, Tuple
 from os import getenv
 from re import match
 
-from discord import Member, Guild, TextChannel, Message, Embed
+from discord import Member, Guild, TextChannel, Message, Embed, Role
 from discord.utils import find
 from discord.ext import commands
 
@@ -42,6 +42,8 @@ class Configuration(commands.Cog):
         
         self.guild: Guild = bot.guilds[0]
         self.bot = bot
+
+        self.guildChat = self.parse_channel("guild-chat")
     
     def __loaded__(self):
         for key, val in Configuration.DEFAULT_CONFIG.items():
@@ -161,21 +163,21 @@ class Configuration(commands.Cog):
         text = "\n".join(self._config.keys())
         await ctx.send(embed=make_alert(text, title="Configuration", color=COLOR_INFO))
     
-    def parse_channel(self, target: str):
+    def parse_channel(self, target: str) -> TextChannel:
         m = match("<#([0-9]+)>", target)
         if m:
             return self.guild.get_channel(int(m.groups()[0]))
         else:
             return find(lambda c: c.name == target, self.guild.channels)
     
-    def parse_role(self, target: str):
+    def parse_role(self, target: str) -> Role:
         m = match("<@&([0-9]+)>", target)
         if m:
             return self.guild.get_role(int(m.groups()[0]))
         else:
             return find(lambda r: r.name == target, self.guild.roles)
     
-    def parse_user(self, target: str):
+    def parse_user(self, target: str) -> Member:
         m = match("<@!([0-9]+)>", target)
         if m:
             return self.guild.get_member(int(m.groups()[0]))

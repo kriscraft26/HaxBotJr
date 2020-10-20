@@ -25,6 +25,7 @@ from cog.help import Help
 from cog.misc import Misc
 from cog.votation import Votation
 from cog.activitytracker import ActivityTracker
+from cog.discordtools import DiscordTools
 
 class HaxBotJr(commands.Bot):
 
@@ -55,6 +56,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(Help(self))
         self.add_cog(Misc(self))
         self.add_cog(await DataManager.load(Votation(self)))
+        self.add_cog(DiscordTools(self))
 
     @classmethod
     def exit(cls):
