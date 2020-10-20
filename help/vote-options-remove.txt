@@ -1,0 +1,16 @@
+restriction: chief+
+
+
+`vote options remove <title> <option>`
+
+Remove specified option from the vote with specified title.
+
+If there is a space in option or title, wrap it with `"`, for example `"apple pie"` instead of `apple pie`.
+
+
+Examples=
+`vote options remove "this is a vote" apple`
+`vote options remove vote "apple pie"`
+
+
+NONE

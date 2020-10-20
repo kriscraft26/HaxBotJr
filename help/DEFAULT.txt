@@ -36,6 +36,8 @@ S#Configuration=
 Votation=
 `vote binary <title> [-d {yes|no}] [-t TARGET]`: start a yes and no vote.
 `vote options <title> [options ...] [-d DEFAULT] [-t TARGET]`: start a vote on list of options.
+`vote options add <title> <option>`: add an option to vote.
+`vote options remove <title> <option>`: remove an option from vote.
 `vote consensus <title>`: start a consensus vote.
 `vote end <title> [-a]`: end currently active vote. 
 
