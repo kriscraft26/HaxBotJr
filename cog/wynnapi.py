@@ -2,6 +2,7 @@ import aiohttp
 from typing import Union
 from datetime import timedelta, datetime
 from time import time
+import backoff
 
 from discord.ext import tasks, commands
 
@@ -101,8 +102,9 @@ class WynnData:
         self.url = LEGACY_URL_BASE
         self.params = params
     
+    @backoff.on_exception(backoff.expo, aiohttp.ClientError, max_tries=3)
     async def _update(self, session: aiohttp.ClientSession):
-        async with session.get(self.url, params=self.params) as resp:
+        async with session.get(self.url, params=self.params, raise_for_status=True) as resp:
             if resp.status != 200:
                 Logger.bot.warning(f"failed request {self.params} with {resp.status}")
                 return
