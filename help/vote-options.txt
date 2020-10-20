@@ -1,18 +1,26 @@
 restriction: chief+
 
 
-`vote options [options ...] [-d DEFAULT]`
+`vote options <title> [options ...] [-d|--default DEFAULT] [-t|--target TARGET]`
 
 Start a vote on list of options.
 
-If there is a space in an option, wrap it with `"`, for example `"apple pie"`.
+If there is a space in an option or title, wrap it with `"`, for example `"apple pie"` instead of `apple pie`.
 
+
+Default=
 If default is specified, it will be all expeditioner's vote until they have explicitly voted.
 
 
+Target=
+If target is specified, the vote will automatically end when any option reached that percentage of vote.
+For example with target of 50, when any option reached 50% of the explicit global votes, the vote is ended and result is displayed anonymously.
+
+
 Examples=
-`vote options apple banana`
-`vote options apple banana -d apple`
+`vote options "this is a vote" apple banana`
+`vote options vote!!! apple banana -d apple`
+`vote options owo apple banana --default apple -t 50`
 
 
 NONE

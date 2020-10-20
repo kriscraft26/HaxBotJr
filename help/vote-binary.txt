@@ -1,16 +1,25 @@
 restriction: chief+
 
 
-`vote binary [-d|--default {yes|no}]`
+`vote binary <title> [-d|--default {yes|no}] [-t|--target TARGET]`
 
 Start a yes and no vote.
+If there title contains space, wrap it with `"`, for example `"vote title"` instead of `vote title`.
 
+
+Default=
 If default is specified, it will be all expeditioner's vote until they have explicitly voted.
 
 
+Target=
+If target is specified, the vote will automatically end when any option reached that percentage of vote.
+For example with target of 50, when any option reached 50% of the explicit global votes, the vote is ended and result is displayed anonymously.
+
+
 Examples=
-`vote binary`
-`vote binary -d yes`
+`vote binary "This is a vote"`
+`vote binary vote!!! -d yes`
+`vote binary owo --default yes -t 50`
 
 
 NONE

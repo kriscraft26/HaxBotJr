@@ -1,9 +1,10 @@
 restriction: chief+
 
 
-`vote consensus`
+`vote consensus <title>`
 
 Start a consensus vote. Assent is the default vote.
+If there title contains space, wrap it with `"`, for example `"vote title"` instead of `vote title`.
 
 
 Vote Types=
@@ -23,6 +24,11 @@ Results and Conditions=
 __Pass__: 0 - 1 Object and 0 Dissent
 __Failed__: 1 or more Dissent
 __Rejected__: 2 or more Object
+
+
+Examples=
+`vote consensus "this is a vote"`
+`vote consensus vote!!!`
 
 
 NONE

@@ -1,14 +1,19 @@
 restriction: chief+
 
 
-`vote end [-a|--anonymous]`
+`vote end <title> [-a|--anonymous]`
 
-End currently active vote, and display the result. If anonymous flag is specified, name of the voters won't be displayed.
+End currently active vote with specified title, and display the result.
+If there title contains space, wrap it with `"`, for example `"vote title"` instead of `vote title`.
+
+
+Anonymous=
+If the anonymous flag is specified, the name of the voters for each options won't be displayed.
 
 
 Examples=
-`vote end`
-`vote end -a`
+`vote end "this is a vote"`
+`vote end vote!!! -a`
 
 
 NONE
