@@ -16,7 +16,7 @@ from cog.snapshotmanager import SnapshotManager
 from cog.configuration import Configuration
 
 
-ACTIVITY_UPDATE_INTERVAL = 10  # in minutes
+ACTIVITY_UPDATE_INTERVAL = 1  # in minutes
 
 
 @DataManager.register("activities", "removedDataCache", "lastUpdateTime")
@@ -26,11 +26,11 @@ class ActivityTracker(commands.Cog):
         self._config: Configuration = bot.get_cog("Configuration")
         self._snapManager: SnapshotManager = bot.get_cog("SnapshotManager")
         self._memeberManager: MemberManager = bot.get_cog("MemberManager")
-        self._wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
+        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
+        self._serverListTracker = wynnAPI.serverList.get_tracker()
 
         self.activities = {}  # id: [actTotal, actCurr, isOnline, server]
         self.lastUpdateTime = None
-        self.lastAPIUpdateTime = None
         self.apiTimestamps = {}
         self.removedDataCache = {}
         self.lb = []
@@ -55,51 +55,45 @@ class ActivityTracker(commands.Cog):
         self._activity_update.start()
     
     @tasks.loop(minutes=ACTIVITY_UPDATE_INTERVAL)
-    async def _activity_update(self):
+    async def _activity_update(self):        
+        serverList = self._serverListTracker.getData()
+        if not serverList:
+            return
+        
+        tracked = self._memeberManager.get_tracked_igns()
+
         now = utcNow()
         if self.lastUpdateTime:
             interval = now - self.lastUpdateTime
         else:
             interval = timedelta(seconds=0)
+
+        for server, players in serverList.items():
+            for ign in players:
+                if ign in tracked:
+
+                    data = self.activities[self._memeberManager.ignIdMap[ign]]
+
+                    if data[2]:
+                        if not server.startswith("lobby"):
+                            data[0] += interval
+                        data[1] += interval
+                    
+                    data[2] = True
+                    data[3] = server
+
+                    tracked.remove(ign)
         
-        hasAPIUpdated = False
-
-        tracked = self._memeberManager.get_tracked_igns()
         for ign in tracked:
-            id_ = self._memeberManager.ignIdMap[ign]
-            uuid = self._memeberManager.members[id_].mcId
-
-            stats = await self._wynnAPI.get_player_stats(uuid)
-            if not stats:
-                Logger.guild.warning(f"failed to get player stats of {ign}")
-                continue
-
-            if self.apiTimestamps.get(id_, -1) < stats["timestamp"]:
-                hasAPIUpdated = True
-                self.apiTimestamps[id_] = stats["timestamp"]
-
-            playerLocation = stats["data"][0]["meta"]["location"]
-            isOnline = playerLocation["online"]
-            server = playerLocation["server"]
-
-            data = self.activities[id_]
-
-            if data[2]:
-                if isOnline:  # if stays online
-                    if not server.startswith("lobby"):
-                        data[0] += interval
-                    data[1] += interval
-                else:  # if logs off
-                    data[1] = timedelta(seconds=0)
-            
-            data[2] = isOnline
-            data[3] = server
+            data = self.activities[self._memeberManager.ignIdMap[ign]]
+            data[1] = timedelta(seconds=0)
+            data[2] = False
+            data[3] = None
         
         self._update_lb()
 
+        # print(utcNow() - now)
         self.lastUpdateTime = now
-        if hasAPIUpdated:
-            self.lastAPIUpdateTime = now
     
     @_activity_update.before_loop
     async def _before_activity_update(self):
@@ -140,7 +134,7 @@ class ActivityTracker(commands.Cog):
         return f"{days:02} {hours:02}:{minutes:02}:{seconds:02}"
     
     def _get_last_update_dt(self):
-        dt = utcNow() - self.lastAPIUpdateTime
+        dt = utcNow() - self.lastUpdateTime
         seconds = trunc(dt.seconds)
         minutes = seconds // 60
         seconds = seconds % 60
