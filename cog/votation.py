@@ -135,7 +135,8 @@ class Votation(commands.Cog):
     async def start_binary_vote(self, ctx: commands.Context, title, target, **kwargs):
         await self._start_vote(ctx, BinaryVote, title, target, **kwargs)
 
-    @parser("vote options", "title", "options...", "-default", "-target", parent=_vote_root)
+    @parser("vote options", "title", "options...", "-default", "-target", 
+        parent=_vote_root, isGroup=True)
     async def start_options_vote(self, ctx: commands.Context, title, target, **kwargs):
         await self._start_vote(ctx, OptionVote, title, target, **kwargs)
     
@@ -167,7 +168,42 @@ class Votation(commands.Cog):
     async def _end_vote_cb(self, channel, vote, anonymous):
         await vote.end(channel, anonymous, self._config)
         del self.votes[vote.title]
+    
+    async def _get_option_vote(self, ctx: commands.Context, title):
+        if title not in self.votes:
+            await ctx.send(embed=make_alert(f"No active vote with title `{title}`"))
+            return
 
+        vote = self.votes[title]
+        if not isinstance(vote, OptionVote):
+            await ctx.send(embed=make_alert(f"`{title}` is not an options vote."))
+            return
+        
+        return vote
+    
+    @parser("vote options add", "title", "option", parent=start_options_vote)
+    async def add_option(self, ctx: commands.Context, title, option):
+        if not await self._config.perm_check(ctx, "group.staff"):
+            return
+
+        vote = await self._get_option_vote(ctx, title)
+        if not vote:
+            return
+        
+        if await vote.add_option(ctx.channel, option):
+            await ctx.message.delete()
+
+    @parser("vote options remove", "title", "option", parent=start_options_vote)
+    async def remove_option(self, ctx: commands.Context, title, option):
+        if not await self._config.perm_check(ctx, "group.staff"):
+            return
+        
+        vote = await self._get_option_vote(ctx, title)
+        if not vote:
+            return
+        
+        if await vote.remove_option(ctx.channel, option, self._config):
+            await ctx.message.delete()
 
 class Vote:
 
@@ -355,6 +391,54 @@ class OptionVote(Vote):
             NUMBER_EMOJIS[self.options.index(self.default)] if self.default else None
         self.options = {NUMBER_EMOJIS[i]: s for i, s in enumerate(self.options)}
         await super().start(channel, expeditioners, config)
+    
+    async def add_option(self, channel: TextChannel, option):
+        if len(self.options) == 10:
+            await channel.send(embed=make_alert("Can't add more option."))
+            return
+        
+        emoji = NUMBER_EMOJIS[len(self.options)]
+        self.options[emoji] = option
+        
+        msg: Message = await channel.fetch_message(self.voteMsg)
+        await msg.add_reaction(emoji)
+        await msg.edit(embed=self.make_vote_embed())
+        
+        return True
+    
+    async def remove_option(self, channel: TextChannel, option, config):
+        if option not in self.options.values():
+            await channel.send("There are no such option.")
+            return
+        
+        hasRemoved = False
+        newOptions = {}
+
+        for emoji, desc in self.options.items():
+            if hasRemoved:
+                newEmoji = NUMBER_EMOJIS[NUMBER_EMOJIS.index(emoji) - 1]
+                newOptions[newEmoji] = desc
+
+                for id_, vote in self.vote.items():
+                    if vote == emoji:
+                        self.vote[id_] = newEmoji
+            else:
+                if desc == option:
+                    hasRemoved = True
+                    for id_, vote in self.vote.items():
+                        if vote == emoji:
+                            self.vote[id_] = None
+                else:
+                    newOptions[emoji] = desc
+        self.options = newOptions
+
+        msg: Message = await channel.fetch_message(self.voteMsg)
+        await msg.remove_reaction(emoji, msg.author)
+        await msg.edit(embed=self.make_vote_embed())
+
+        await self.update_member_msg(config)
+
+        return True
 
 
 class ConsensusVote(Vote):
