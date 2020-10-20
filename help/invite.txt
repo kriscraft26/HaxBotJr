@@ -1,0 +1,14 @@
+restriction: recruiter+
+
+
+`invite <member> <ign>`
+
+Invite a non-guild member with specified ign. They will be given cadet and related roles.
+
+
+Examples=
+`invite @Jelloe3 SephDark18`
+`invite Kris kriscraft26`
+
+
+NONE

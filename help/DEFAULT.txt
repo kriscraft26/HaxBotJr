@@ -42,7 +42,12 @@ Votation=
 `vote end <title> [-a]`: end currently active vote. 
 
 
-#Misc and Utility=
+#Discord=
+`invite <member> <ign>`: invite a non-guild member.S#
+`kick <member>`: kick a guild member#
+
+
+Misc and Utility=
 `now`: display internal date/time, and day of bi-week.
 `snap`: display list of available snapshots.
 `quote [-i]`: pee pee poo poo

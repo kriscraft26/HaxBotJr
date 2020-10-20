@@ -1,0 +1,14 @@
+restriction: chief+
+
+
+`kick <member>`
+
+kick a non-staff guild member, all their guild roles, manager roles and nick will be removed.
+
+
+Examples=
+`kick "Cadet Pucaet"`
+`kick @Cadet Pucaet`
+
+
+NONE
