@@ -77,6 +77,11 @@ discordLogger.addHandler(infoHandler)
 discordLogger.addHandler(debugHandler)
 discordLogger.addHandler(termHandler)
 
+backoffLogger = logging.getLogger("backoff")
+backoffLogger.addHandler(infoHandler)
+backoffLogger.addHandler(debugHandler)
+backoffLogger.addHandler(termHandler)
+
 
 class LoggerPair:
 
