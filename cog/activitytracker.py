@@ -30,7 +30,7 @@ class ActivityTracker(commands.Cog):
         self._serverListTracker = wynnAPI.serverList.get_tracker()
 
         self.activities = {}  # id: [actTotal, actCurr, isOnline, server]
-        self.lastUpdateTime = None
+        self.lastUpdateTime = utcNow()
         self.apiTimestamps = {}
         self.removedDataCache = {}
         self.lb = []
@@ -135,10 +135,7 @@ class ActivityTracker(commands.Cog):
     
     def _get_last_update_dt(self):
         dt = utcNow() - self.lastUpdateTime
-        seconds = trunc(dt.seconds)
-        minutes = seconds // 60
-        seconds = seconds % 60
-        return f"{minutes} minutes {seconds} seconds ago"
+        return f"{trunc(dt.seconds)} seconds ago"
 
     @parser("online")
     async def display_online(self, ctx: commands.Context):
