@@ -35,18 +35,6 @@ class Votation(commands.Cog):
         self.expeditioners = set(map(lambda m: m.id, 
             filter(isExpeditioner, channel.members)))
 
-        self._refresh_loop.start()
-    
-    @tasks.loop(hours=REFRESH_INTERVAL)
-    async def _refresh_loop(self):
-        for vote in self.votes.values():
-            await vote.refresh(self._config, self.expeditioners)
-    
-    @_refresh_loop.before_loop
-    async def _before_refresh_loop(self):
-        await self.bot.wait_until_ready()
-        Logger.bot.debug("Starting vote refresh loop")
-
     def _find_expeditioners(self, channel: TextChannel) -> Set[int]:
         return set(map(lambda m: m.id, filter(self._is_expeditioner, channel.members)))
     
@@ -86,24 +74,23 @@ class Votation(commands.Cog):
         await vote.start(ctx.channel, self.expeditioners, self._config)
     
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction: Reaction, member: Member):
+    async def on_raw_reaction_add(self, payload):
         if not self.votes:
             return
 
-        if member.id not in self.expeditioners:
+        if payload.member.id not in self.expeditioners:
             return
         
-        message: Message = reaction.message
-        emoji = reaction.emoji
+        channel: TextChannel = self._config.guild.get_channel(payload.channel_id)
+        message: Message = await channel.fetch_message(payload.message_id)
+        emoji = payload.emoji.name
 
         for vote in self.votes.values():
-            if vote.voteMsg == message.id and emoji in vote.options:
-                await message.remove_reaction(emoji, member)
-                await vote.set_vote(member.id, emoji, self._config)
+            if vote.voteMsg == payload.message_id and emoji in vote.options:
+                await message.remove_reaction(emoji, payload.member)
+                await vote.set_vote(payload.member.id, emoji, self._config)
 
                 if vote.should_auto_end():
-                    channel = self._config("channel.expedition")
-                    channel = self._config.guild.get_channel(channel)
                     await self._end_vote_cb(channel, vote, True)
 
                 return
@@ -204,6 +191,16 @@ class Votation(commands.Cog):
         
         if await vote.remove_option(ctx.channel, option, self._config):
             await ctx.message.delete()
+    
+    @parser("vote refresh", parent=_vote_root)
+    async def refresh_votes(self, ctx: commands.Context):
+        if not self._config.has_role("expedition", ctx.author):
+            await ctx.send(embed=make_alert("Only expeditioner can use this command."))
+            return
+        await ctx.message.delete()
+
+        for vote in self.votes.values():
+            await vote.refresh(self._config, self.expeditioners)
 
 class Vote:
 
