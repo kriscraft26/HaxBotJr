@@ -1,0 +1,9 @@
+restriction: expeditioner
+
+
+`vote refresh`
+
+Refresh all active votes, they will be deleted and resent with their state intact.
+
+
+NONE

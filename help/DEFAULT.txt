@@ -4,28 +4,28 @@ NONE
 **Commands Overview**
 
 
-Player Statistic=
+=Player Statistic=
 `stats <ign> [-s KEY]`: display a player's stats.
-`em [-a] [-t] [-s KEY]`: display the emerald leader board.T#
-`em parse`: parse provided /gu list output and update emerald stats.#
+`em [-a] [-t] [-s KEY]`: display the emerald leader board.
+T`em parse`: parse provided /gu list output and update emerald stats.
 `xp [-a] [-t] [-s KEY]`: display the xp leader board.
 `wc [-a] [-t] [-s KEY]`: display the war count leader board.
 
 
-Guild Members=
+=Guild Members=
 `members [-i] [-s KEY]`: display the guild member list.
-S#`members missing [-s KEY]`: display list of in-game guild members that are missing from discord guild member list.#
+S`members missing [-s KEY]`: display list of in-game guild members that are missing from discord guild member list.
 
 
-Claims=
-`claim`: display claims status.S#
-`claim add [terrs ...]`: add territories to the claim list.
-`claim remove [terrs ...]`: remove territories from the claim list.#T#
-`claim alert`: display claim alert status.
-`claim alert cancel`: cancel scheduled or active claim alert.#
+=Claims=
+`claim`: display claims status.
+S`claim add [terrs ...]`: add territories to the claim list.
+S`claim remove [terrs ...]`: remove territories from the claim list.
+T`claim alert`: display claim alert status.
+T`claim alert cancel`: cancel scheduled or active claim alert.
 
 
-S#Configuration=
+S=Configuration=
 `config`: display list of configuration fields.
 `config channel {NAME} [-r] [-s CHANNEL]`: display and change channel.* fields.
 `config role {NAME} [-r] [-s ROLE]` : display and change role.* fields.
@@ -33,21 +33,27 @@ S#Configuration=
 `config vrole {NAME} [-e VROLE] [-r ITEM] [-a ITEM]`: display and change vrole.* fields.
 
 
-Votation=
-`vote binary <title> [-d {yes|no}] [-t TARGET]`: start a yes and no vote.
-`vote options <title> [options ...] [-d DEFAULT] [-t TARGET]`: start a vote on list of options.
-`vote options add <title> <option>`: add an option to vote.
-`vote options remove <title> <option>`: remove an option from vote.
-`vote consensus <title>`: start a consensus vote.
-`vote end <title> [-a]`: end currently active vote. 
+E=Votation=
+S`vote binary <title> [-d {yes|no}] [-t TARGET]`: start a yes and no vote.
+S`vote options <title> [options ...] [-d DEFAULT] [-t TARGET]`: start a vote on list of options.
+S`vote options add <title> <option>`: add an option to vote.
+S`vote options remove <title> <option>`: remove an option from vote.
+S`vote consensus <title>`: start a consensus vote.
+S`vote end <title> [-a]`: end currently active vote.
+`vote refresh`: refresh all active votes.
 
 
-#Discord=
-`invite <member> <ign>`: invite a non-guild member.S#
-`kick <member>`: kick a guild member#
+=Discord=
+`invite <member> <ign>`: invite a non-guild member.
+S`kick <member>`: kick a guild member.
 
 
-Misc and Utility=
+=Wynncraft=
+`online`: display all online guild members.
+`act [-s KEY]`: display guild members' online time.
+
+
+=Misc and Utility=
 `now`: display internal date/time, and day of bi-week.
 `snap`: display list of available snapshots.
 `quote [-i]`: pee pee poo poo

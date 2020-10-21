@@ -1,6 +1,7 @@
 import os
 import re
 
+from discord import Member
 from discord.ext import commands
 
 from msgmaker import decorate_text, make_alert, COLOR_INFO
@@ -14,12 +15,21 @@ HELP_FOLDER = "./help/"
 class Help(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        self.patterns = {
-            "trusted": re.compile(r"(T#([^#]+)#)"),
-            "staff": re.compile(r"(S#([^#]+)#)")
-        }
-
         self._config: Configuration = bot.get_cog("Configuration")
+
+        self.permChecks = {
+            "S": lambda m: self._config.is_of_group("staff", m),
+            "T": lambda m: self._config.is_of_group("trusted", m),
+            "E": lambda m: self._config.has_role("expedition", m),
+            "R": lambda m: self._invite_perm_check(m)
+        }
+    
+    def _invite_perm_check(self, m: Member):
+        rank = self._config.get_rank(m)
+        if not rank:
+            return False
+        rank = rank[0]
+        return rank not in ["MoonWalker", "Cadet"]
 
     @parser("help", "cmd*")
     async def get_help(self, ctx: commands.Context, cmd):
@@ -33,12 +43,6 @@ class Help(commands.Cog):
             with open(f, "r") as helpFile:
                 text = "".join(helpFile.readlines())
 
-            for group, pattern in self.patterns.items():
-                match = list(pattern.finditer(text))
-                if match:
-                    rep = r"\2" if self._config.is_of_group(group, ctx.author) else ""
-                    text = pattern.sub(rep, text)
-
             [title, text, *fields, subtext] = text.split("\n\n\n")
 
             title = "" if title == "NONE" else title
@@ -47,7 +51,22 @@ class Help(commands.Cog):
 
             embed = make_alert(text, title=title, subtext=subtext, color=COLOR_INFO)
             for field in fields:
-                [fName, fVal] = field.split("=")
+                sections = field.split("=")
+
+                if cmd:
+                    [fName, fVal] = sections
+                else:
+                    [fPerm, fName, fVal] = sections
+                    if fPerm and not self.permChecks[fPerm](ctx.author):
+                        continue
+
+                    for perm, checker in self.permChecks.items():
+                        pattern = perm + r"(`.+\n?)"
+                        match = list(re.finditer(pattern, fVal))
+                        if match:
+                            rep = r"\1" if checker(ctx.author) else ""
+                            fVal = re.sub(pattern, rep, fVal)
+                
                 embed.add_field(name=fName, value=fVal.strip(), inline=False)
             await ctx.send(embed=embed)
         else:
