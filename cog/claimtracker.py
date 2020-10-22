@@ -30,9 +30,10 @@ class ClaimTracker(commands.Cog):
         self._terrListTracker = wynnAPI.terrList.get_tracker()
 
         self._hasInitClaimUpdate = False
-        # 0 = not scheduled
-        # 1 = scheduled
-        # 2 = active
+        # -1 = disabled
+        #  0  = not scheduled
+        #  1  = scheduled
+        #  2  = active
         self._alertStatus = 0
         self._alertMsg = None
         self._alertStatusMsg = None
@@ -109,17 +110,20 @@ class ClaimTracker(commands.Cog):
             if text:
                 await self._alertMsg.edit(content=text)
     
-    async def dismiss_alert(self):
-        if self._alertStatus:
+    async def dismiss_alert(self, disable=False):
+        if self._alertStatus > 0:
             Logger.bot.info(f"claim alert is canceled")
-            self._alertStatus = 0
             if self._alert.is_running():
                 self._alert.stop()
             if self._alertStatusMsg:
-                text = "👌 *the situation has been taken care of.*"
+                if disable:
+                    text = "❌ *alert has been disabled.*"
+                else:
+                    text = "👌 *the situation has been taken care of.*"
                 await self._alertStatusMsg.edit(content=text)
                 self._alertStatusMsg = None
             self._alertMsg = None
+        self._alertStatus = -1 if disable else 0
 
     @tasks.loop(minutes=CLAIM_ALERT_DElAY)
     async def _alert(self):
@@ -255,7 +259,7 @@ class ClaimTracker(commands.Cog):
     async def get_alert_status(self, ctx: commands.Context):
         if not await self._config.perm_check(ctx, "group.trusted"):
             return
-        text = ["not scheduled", "scheduled", "active"][self._alertStatus]
+        text = ["not scheduled", "scheduled", "active", "disabled"][self._alertStatus]
         if self._alertStatus == 1:
             dt = self._alert.next_iteration - now()
             seconds = trunc(dt.seconds)
@@ -269,4 +273,14 @@ class ClaimTracker(commands.Cog):
         if not await self._config.perm_check(ctx, "group.trusted"):
             return
         await self.dismiss_alert()
+        await ctx.message.add_reaction("✅")
+    
+    @parser("claim alert toggle", parent=get_alert_status)
+    async def toggle_alert(self, ctx: commands.Context):
+        if not await self._config.perm_check(ctx, "group.staff"):
+            return
+        if self._alertStatus >= 0:
+            await self.dismiss_alert(disable=True)
+        else:
+            self._alertStatus = 0
         await ctx.message.add_reaction("✅")
