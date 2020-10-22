@@ -126,7 +126,7 @@ class ActivityTracker(commands.Cog):
     
     def _format_dt(self, dt: timedelta):
         days = dt.days
-        seconds = trunc(dt.seconds) - 86400 * days
+        seconds = trunc(dt.seconds)
         hours = seconds // 3600
         minutes = seconds // 60 % 60
         seconds = seconds % 60
