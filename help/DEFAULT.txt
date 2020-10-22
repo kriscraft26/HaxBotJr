@@ -43,9 +43,9 @@ S`vote end <title> [-a]`: end currently active vote.
 `vote refresh`: refresh all active votes.
 
 
-=Discord=
+S=Discord=
 `invite <member> <ign>`: invite a non-guild member.
-S`kick <member>`: kick a guild member.
+`kick <member>`: kick a guild member.
 
 
 =Wynncraft=
