@@ -5,6 +5,7 @@ from math import trunc
 from discord.ext import commands, tasks
 
 from logger import Logger
+from event import Event
 from msgmaker import make_entry_pages, make_stat_entries, decorate_text
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
@@ -39,8 +40,9 @@ class ActivityTracker(commands.Cog):
         self.bot = bot
 
         self._snapManager.add("ActivityTracker", self)
-        self._memeberManager.add_member_track_cb(self.on_member_track)
-        self._memeberManager.add_member_un_track_cb(self.on_member_un_track)
+        
+        Event.listen("memberTrack", self.on_member_track)
+        Event.listen("memberUnTrack", self.on_member_un_track)
     
     def __snap__(self):
         return self._make_activity_pages()
@@ -52,6 +54,7 @@ class ActivityTracker(commands.Cog):
         for id_ in missingId:
             self.on_member_track(id_)
 
+        self._update_lb()
         self._activity_update.start()
     
     @tasks.loop(minutes=ACTIVITY_UPDATE_INTERVAL)
@@ -106,7 +109,7 @@ class ActivityTracker(commands.Cog):
         sortKey = lambda id_: -1 * self.activities[id_][1]
         self.currLb = sorted(list(self.activities.keys()), key=sortKey)
     
-    def on_member_track(self, id_):
+    async def on_member_track(self, id_):
         if id_ in self.removedDataCache:
             data = self.removedDataCache.pop(id_)
         else:
@@ -114,7 +117,7 @@ class ActivityTracker(commands.Cog):
         self.activities[id_] = data
         self._update_lb()
     
-    def on_member_un_track(self, id_):
+    async def on_member_un_track(self, id_):
         self.removedDataCache[id_] = self.activities.pop(id_)
         self._update_lb()
     

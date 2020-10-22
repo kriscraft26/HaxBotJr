@@ -5,6 +5,7 @@ from discord import Member, Embed, User
 from discord.ext import tasks, commands
 
 from logger import Logger
+from event import Event
 from msgmaker import *
 from reactablemessage import PagedMessage
 from leaderboard import LeaderBoard
@@ -62,9 +63,6 @@ class MemberManager(commands.Cog):
 
         self._snapshotManager.add("MemberManager", self)
 
-        self.memberTrackCbs = set()
-        self.memberUnTrackCbs = set()
-
         self.bot = bot
 
     def __loaded__(self):
@@ -108,6 +106,8 @@ class MemberManager(commands.Cog):
                 Logger.bot.info(f"{joinTracked} status set to active")
                 for ign in joined:
                     await self._config.send("memberLog", ign + " has joined the guild")
+                for id_ in joinedIds:
+                    await Event.broadcast("memberTrack", id_)
             
             removed = prevIgMembers.difference(self._igMembers)
             removeTracked = removed.intersection(trackedIgns)
@@ -117,6 +117,8 @@ class MemberManager(commands.Cog):
                 Logger.bot.info(f"{removeTracked} status set to idle")
                 for ign in removed:
                     await self._config.send("memberLog", ign + " has left the guild")
+                for id_ in removedIds:
+                    await Event.broadcast("memberUnTrack", id_)
     
     @_ig_members_update.before_loop
     async def _before_ig_members_update(self):
@@ -129,16 +131,16 @@ class MemberManager(commands.Cog):
         isGMemberAfter = self._config.is_of_group("guild", after)
 
         if isGMemberBefore and not isGMemberAfter:
-            self._remove_member(self.members[after.id])
+            await self._remove_member(self.members[after.id])
         elif not isGMemberBefore and isGMemberAfter:
-            self._update_guild_info(await self._add_member(after), after)
+            await self._update_guild_info(await self._add_member(after), after)
         elif isGMemberBefore and isGMemberAfter:
-            self._update_guild_info(self.members[before.id], after)
+            await self._update_guild_info(self.members[before.id], after)
     
     @commands.Cog.listener()
     async def on_member_remove(self, dMember: Member):
         if dMember.id in self.members:
-            self._remove_member(self.members[dMember.id])
+            await self._remove_member(self.members[dMember.id])
 
     @commands.Cog.listener()
     async def on_user_update(self, before: User, after: User):
@@ -147,25 +149,17 @@ class MemberManager(commands.Cog):
             Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
             member.discord = str(after)
     
-    def add_member_track_cb(self, cb):
-        self.memberTrackCbs.add(cb)
-    
-    def add_member_un_track_cb(self, cb):
-        self.memberUnTrackCbs.add(cb)
-    
-    def _mark_idle(self, id_):
+    async def _mark_idle(self, id_):
         self.idleMembers.add(id_)
-        for cb in self.memberUnTrackCbs:
-            cb(id_)
+        await Event.broadcast("memberUnTrack", id_)
         Logger.bot.info(f"{self.members[id_].ign} status set to idle")
     
-    def _un_mark_idle(self, id_):
+    async def _un_mark_idle(self, id_):
         self.idleMembers.remove(id_)
-        for cb in self.memberTrackCbs:
-            cb(id_)
+        await Event.broadcast("memberTrack", id_)
         Logger.bot.info(f"{self.members[id_].ign} status set to active")
 
-    def _update_guild_info(self, gMember: GuildMember, dMember: Member):
+    async def _update_guild_info(self, gMember: GuildMember, dMember: Member):
         currRank, vRank = self._config.get_rank(dMember)
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
@@ -179,9 +173,9 @@ class MemberManager(commands.Cog):
         if gMember.ign != currIgn:
             Logger.guild.info(f"{gMember.ign} changed ign to {currIgn}")
             if currIgn in self._igMembers and gMember.id in self.idleMembers:
-                self._un_mark_idle(gMember.id)
+                await self._un_mark_idle(gMember.id)
             elif currIgn not in self._igMembers and gMember.id not in self.idleMembers:
-                self._mark_idle(gMember.id)
+                await self._mark_idle(gMember.id)
             del self.ignIdMap[gMember.ign]
             gMember.ign = currIgn
             self.ignIdMap[currIgn] = gMember.id
@@ -202,23 +196,23 @@ class MemberManager(commands.Cog):
 
             ign = dMember.nick.split(" ")[-1]
             if ign not in self._igMembers:
-                self._mark_idle(id_)
+                await self._mark_idle(id_)
         
         removed = prevGuildMemberIds.difference(currGuildMemberIds)
         for id_ in removed:
-            self._remove_member(self.members[id_])
+            await self._remove_member(self.members[id_])
         
         changed = prevGuildMemberIds.intersection(currGuildMemberIds)
         for id_ in changed:
             gMember = self.members[id_]
             dMember = currGuildDMembers[id_]
-            self._update_guild_info(gMember, dMember)
+            await self._update_guild_info(gMember, dMember)
 
             ign = dMember.nick.split(" ")[-1]
             if ign in self._igMembers and id_ in self.idleMembers:
-                self._un_mark_idle(id_)
+                await self._un_mark_idle(id_)
             elif ign not in self._igMembers and id_ not in self.idleMembers:
-                self._mark_idle(id_)
+                await self._mark_idle(id_)
     
     async def _add_member(self, dMember: Member):
         id_ = dMember.id
@@ -240,14 +234,14 @@ class MemberManager(commands.Cog):
         self.ignIdMap[gMember.ign] = id_
         self.members[id_] = gMember
 
-        if gMember.ign not in self._igMembers:
-            self._mark_idle(id_)
+        if gMember.ign in self._igMembers:
+            await Event.broadcast("memberTrack", id_)
+        else:
+            await self._mark_idle(id_)
         
-        for cb in self.memberTrackCbs:
-            cb(id_)
         return gMember
     
-    def _remove_member(self, gMember: GuildMember):
+    async def _remove_member(self, gMember: GuildMember):
         Logger.bot.info(f"removed guild member {gMember}")
         id_ = gMember.id
 
@@ -258,8 +252,7 @@ class MemberManager(commands.Cog):
         self._removedMembers[id_] = (gMember, LeaderBoard.get_entry(id_))
         LeaderBoard.remove_entry(id_)
 
-        for cb in self.memberUnTrackCbs:
-            cb(id_)
+        await Event.broadcast("memberUnTrack", id_)
 
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
