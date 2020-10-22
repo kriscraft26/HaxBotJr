@@ -31,13 +31,6 @@ class DiscordTools(commands.Cog):
         self.recruiterRoles = ("Engineer", "Passengers")
         self.trialCapRoles = ("Space Pilot", "Flight Captains")
         self.captainRoles = ("Rocketeer", "Flight Captains")
-
-    def can_invite(self, member: Member):
-        rank = self._config.get_rank(member)
-        if not rank:
-            return False
-        rank = rank[0]
-        return rank not in ["MoonWalker", "Cadet"]
     
     def _map_roles(self, roleNames):
         roles = []
@@ -80,8 +73,7 @@ class DiscordTools(commands.Cog):
     
     @parser("invite", "member", "ign")
     async def invite_member(self, ctx: commands.Context, member, ign):
-        if not self.can_invite(ctx.author):
-            await ctx.send(embed=make_alert("you don't have permission to invite."))
+        if not await self._config.perm_check(ctx, "group.staff"):
             return
 
         member: Member = self._config.parse_user(member)
