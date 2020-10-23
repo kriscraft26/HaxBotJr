@@ -104,8 +104,8 @@ class ActivityTracker(commands.Cog):
         Logger.bot.debug("Starting activity update loop")
     
     def _update_lb(self):
-        sortKey = lambda id_: -1 * self.activities[id_][0]
-        self.lb = sorted(list(self.activities.keys()), key=sortKey)
+        sortKey = lambda id_: -1 * self.get_activity(id_)
+        self.lb = sorted(list(self._memeberManager.members.keys()), key=sortKey)
         sortKey = lambda id_: -1 * self.activities[id_][1]
         self.currLb = sorted(list(self.activities.keys()), key=sortKey)
     
@@ -118,8 +118,16 @@ class ActivityTracker(commands.Cog):
         self._update_lb()
     
     async def on_member_un_track(self, id_):
-        self.removedDataCache[id_] = self.activities.pop(id_)
-        self._update_lb()
+        if id_ in self.activities:
+            self.removedDataCache[id_] = self.activities.pop(id_)
+            self._update_lb()
+    
+    def get_activity(self, id_) -> timedelta:
+        if id_ in self.activities:
+            return self.activities[id_][0]
+        elif id_ in self.removedDataCache:
+            return self.removedDataCache[id_][0]
+        return timedelta(seconds=0)
     
     def biweekly_reset(self):
         Logger.bot.info("Reseting activities")
@@ -177,7 +185,7 @@ class ActivityTracker(commands.Cog):
         entries = []
         
         igns = map(lambda id_: self._memeberManager.members[id_].ign, self.lb)
-        statSelector = lambda m: self._format_dt(self.activities[m.id][0])
+        statSelector = lambda m: self._format_dt(self.get_activity(m.id))
         members = self._memeberManager.members
 
         entries = make_stat_entries(self.lb, igns, members, statSelector, strStat=True)

@@ -149,9 +149,10 @@ class MemberManager(commands.Cog):
             Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
             member.discord = str(after)
     
-    async def _mark_idle(self, id_):
+    async def _mark_idle(self, id_, broadcast=True):
         self.idleMembers.add(id_)
-        await Event.broadcast("memberUnTrack", id_)
+        if broadcast:
+            await Event.broadcast("memberUnTrack", id_)
         Logger.bot.info(f"{self.members[id_].ign} status set to idle")
     
     async def _un_mark_idle(self, id_):
@@ -163,6 +164,7 @@ class MemberManager(commands.Cog):
         currRank, vRank = self._config.get_rank(dMember)
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
+            await Event.broadcast("memberRankChange", gMember.id, gMember.rank, currRank)
             gMember.rank = currRank
             LeaderBoard.reset_all_acc(gMember.id)
         if gMember.vRank != vRank:
@@ -237,7 +239,7 @@ class MemberManager(commands.Cog):
         if gMember.ign in self._igMembers:
             await Event.broadcast("memberTrack", id_)
         else:
-            await self._mark_idle(id_)
+            await self._mark_idle(id_, broadcast=False)
         
         return gMember
     
@@ -247,12 +249,13 @@ class MemberManager(commands.Cog):
 
         del self.members[id_]
         del self.ignIdMap[gMember.ign]
-        id_ in self.idleMembers and self.idleMembers.remove(id_)
+        if id_ in self.idleMembers:
+            self.idleMembers.remove(id_)
+        else:
+            await Event.broadcast("memberUnTrack", id_)
 
         self._removedMembers[id_] = (gMember, LeaderBoard.get_entry(id_))
         LeaderBoard.remove_entry(id_)
-
-        await Event.broadcast("memberUnTrack", id_)
 
     def get_igns_set(self) -> Set[str]:
         return set(self.ignIdMap.keys())
