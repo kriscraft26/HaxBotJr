@@ -12,7 +12,7 @@ from logger import Logger
 
 LEGACY_URL_BASE = "https://api.wynncraft.com/public_api.php"
 V2_URL_BASE = "https://api.wynncraft.com/v2/" 
-UPDATE_INTERVAL = 3  # Number of seconds between each update() call.
+UPDATE_INTERVAL = 10  # Number of seconds between each update() call.
 
 
 MOJANG_UUID_URL = "https://api.mojang.com/users/profiles/minecraft/%s?at=%s"
