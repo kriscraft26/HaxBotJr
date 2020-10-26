@@ -10,6 +10,7 @@ from logger import Logger
 from msgmaker import *
 from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
+from util.discordutil import Discord
 from cog.datamanager import DataManager
 
 
@@ -34,10 +35,11 @@ class Configuration(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self._config = Configuration.DEFAULT_CONFIG
         self._groups = {
-            "guild": ["MoonWalker", "Cosmonaut", "Rocketeer", "Space Pilot", 
-                      "Engineer", "Cadet"],
+            "guild": ["MoonWalker", "Cosmonaut", "Strategist", "Pilot", 
+                      "Space Pilot", "Engineer",
+                      "Rocketeer", "Cadet"],
             "staff": ["Cosmonaut"],
-            "trusted": ["Cosmonaut", "Rocketeer"]
+            "trusted": ["Cosmonaut", "Strategist", "Pilot"]
         }
         
         self.guild: Guild = bot.guilds[0]

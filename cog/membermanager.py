@@ -162,11 +162,13 @@ class MemberManager(commands.Cog):
 
     async def _update_guild_info(self, gMember: GuildMember, dMember: Member):
         currRank, vRank = self._config.get_rank(dMember)
+        change = [gMember.rank, currRank]
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
-            await Event.broadcast("memberRankChange", gMember.id, gMember.rank, currRank)
             gMember.rank = currRank
-            LeaderBoard.reset_all_acc(gMember.id)
+            if change != ["Rocketeer", "Pilot"] and change != ["Engineer", "Rocketeer"]:
+                await Event.broadcast("memberRankChange", gMember.id, gMember.rank, currRank)
+                LeaderBoard.reset_all_acc(gMember.id)
         if gMember.vRank != vRank:
             Logger.guild.info(f"{gMember.ign} vRank change {gMember.vRank} -> {vRank}")
             gMember.vRank = vRank
