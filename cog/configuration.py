@@ -10,7 +10,6 @@ from logger import Logger
 from msgmaker import *
 from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
-from util.discordutil import Discord
 from cog.datamanager import DataManager
 
 
@@ -121,6 +120,8 @@ class Configuration(commands.Cog):
 
         if roleRank.name == nameRank:
             return (roleRank.name, None)
+        
+        return (roleRank.name, nameRank)
         
         if nameRank in self._config["vrole.visual"]:
             if roleRank.id in self._config["vrole.visual"][nameRank]:
