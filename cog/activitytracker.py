@@ -10,11 +10,12 @@ from msgmaker import make_entry_pages, make_stat_entries, decorate_text
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now as utcNow
+from util.discordutil import Discord
+from state.config import Config
 from cog.membermanager import MemberManager
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
 from cog.snapshotmanager import SnapshotManager
-from cog.configuration import Configuration
 
 
 ACTIVITY_UPDATE_INTERVAL = 1  # in minutes
@@ -24,7 +25,6 @@ ACTIVITY_UPDATE_INTERVAL = 1  # in minutes
 class ActivityTracker(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
-        self._config: Configuration = bot.get_cog("Configuration")
         self._snapManager: SnapshotManager = bot.get_cog("SnapshotManager")
         self._memeberManager: MemberManager = bot.get_cog("MemberManager")
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
@@ -207,7 +207,7 @@ class ActivityTracker(commands.Cog):
     
     @parser("act reset", parent=display_activity)
     async def reset_activity(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         self.biweekly_reset()
         await ctx.message.add_reaction("✅")

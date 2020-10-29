@@ -10,7 +10,7 @@ from logger import Logger
 from msgmaker import make_alert, COLOR_INFO, decorate_text
 from reactablemessage import ConfirmMessage
 from util.cmdutil import parser
-from cog.configuration import Configuration
+from util.discordutil import Discord
 from cog.datamanager import DataManager
 
 
@@ -25,35 +25,20 @@ class Votation(commands.Cog):
         self.expeditioners: Set[int] = set()
         self.votes = {}
 
-        self._config: Configuration = bot.get_cog("Configuration")
-
         self.bot = bot
 
     async def __loaded__(self):
-        channel = self._config.guild.get_channel(self._config("channel.expedition"))
-        isExpeditioner = lambda m: self._config.has_role("expedition", m)
+        isExpeditioner = lambda m: Discord.have_role(m, Discord.Roles.expeditioner.id)
         self.expeditioners = set(map(lambda m: m.id, 
-            filter(isExpeditioner, channel.members)))
-
-    def _find_expeditioners(self, channel: TextChannel) -> Set[int]:
-        return set(map(lambda m: m.id, filter(self._is_expeditioner, channel.members)))
-    
-    def _is_expeditioner(self, member: Member) -> bool:
-        return bool(find(lambda r: r.name == "Expeditioner", member.roles))
-    
-    def _is_expedition_channel(self, channel: TextChannel) -> bool:
-        return channel.name == "galactic-expedition"
+            filter(isExpeditioner, Discord.Channels.expedition.members)))
     
     async def _start_vote(self, ctx: commands.Context, voteCls, title, target, **kwargs):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
-        if not self._is_expeditioner(ctx.author):
-            await ctx.send(embed=make_alert("Only an expeditioner can start a vote."))
+        if not await Discord.role_check(ctx, Discord.Roles.expeditioner.id):
             return
-        if not self._is_expedition_channel(ctx.channel):
-            await ctx.send(embed=make_alert("Can only start vote in expedition channel."))
+        if not await Discord.channel_check(ctx, Discord.Channels.expedition.id):
             return
-        self.expeditioners = self._find_expeditioners(ctx.channel)
         if not self.expeditioners:
             await ctx.send(embed=make_alert("No expeditioners in this channel."))
             return
@@ -71,27 +56,27 @@ class Votation(commands.Cog):
             return
 
         self.votes[title] = vote
-        await vote.start(ctx.channel, self.expeditioners, self._config)
+        await vote.start(self.expeditioners)
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if not self.votes:
             return
 
-        if payload.member.id not in self.expeditioners:
+        if payload.channel_id != Discord.Channels.expedition.id or \
+           payload.member.id not in self.expeditioners:
             return
         
-        channel: TextChannel = self._config.guild.get_channel(payload.channel_id)
-        message: Message = await channel.fetch_message(payload.message_id)
+        message: Message = await Discord.Channels.expedition.fetch_message(payload.message_id)
         emoji = payload.emoji.name
 
         for vote in self.votes.values():
             if vote.voteMsg == payload.message_id and emoji in vote.options:
                 await message.remove_reaction(emoji, payload.member)
-                await vote.set_vote(payload.member.id, emoji, self._config)
+                await vote.set_vote(payload.member.id, emoji)
 
                 if vote.should_auto_end():
-                    await self._end_vote_cb(channel, vote, True)
+                    await self._end_vote_cb(vote, True)
 
                 return
     
@@ -101,17 +86,17 @@ class Votation(commands.Cog):
             return
         
         id_ = after.id
-        isBefore = self._is_expeditioner(before)
-        isAfter = self._is_expeditioner(after)
+        isBefore = Discord.have_role(before, Discord.Roles.expeditioner.id)
+        isAfter = Discord.have_role(after, Discord.Roles.expeditioner.id)
 
         if isBefore and not isAfter:
             self.expeditioners.remove(id_)
             for vote in self.votes.values():
-                await vote.remove_expeditioner(id_, self._config)
+                await vote.remove_expeditioner(id_)
         elif not isBefore and isAfter:
             self.expeditioners.add(id_)
             for vote in self.votes.values():
-                await vote.add_expeditioner(id_, self._config)
+                await vote.add_expeditioner(id_)
     
     @parser("vote", isGroup=True)
     async def _vote_root(self, ctx):
@@ -133,14 +118,13 @@ class Votation(commands.Cog):
     
     @parser("vote end", "title", ["anonymous"], parent=_vote_root)
     async def end_vote(self, ctx: commands.Context, title, anonymous):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
 
         if not self.votes:
             await ctx.send(embed=make_alert("No active vote."))
             return
-        if not self._is_expeditioner(ctx.author):
-            await ctx.send(embed=make_alert("Only an expeditioner can end the vote."))
+        if not await Discord.role_check(ctx, Discord.Roles.expeditioner.id):
             return
         if title not in self.votes:
             await ctx.send(embed=make_alert(f"No vote titled `{title}`."))
@@ -150,10 +134,10 @@ class Votation(commands.Cog):
         text = f"Are you sure to end the vote `{title}`?"
         vote = self.votes[title]
         await ConfirmMessage(
-            ctx, text, None, self._end_vote_cb, ctx.channel, vote, anonymous).init()
+            ctx, text, None, self._end_vote_cb, vote, anonymous).init()
 
-    async def _end_vote_cb(self, channel, vote, anonymous):
-        await vote.end(channel, anonymous, self._config)
+    async def _end_vote_cb(self, vote, anonymous):
+        await vote.end(anonymous)
         del self.votes[vote.title]
     
     async def _get_option_vote(self, ctx: commands.Context, title):
@@ -170,37 +154,36 @@ class Votation(commands.Cog):
     
     @parser("vote options add", "title", "option", parent=start_options_vote)
     async def add_option(self, ctx: commands.Context, title, option):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
 
         vote = await self._get_option_vote(ctx, title)
         if not vote:
             return
         
-        if await vote.add_option(ctx.channel, option):
+        if await vote.add_option(option):
             await ctx.message.delete()
 
     @parser("vote options remove", "title", "option", parent=start_options_vote)
     async def remove_option(self, ctx: commands.Context, title, option):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         
         vote = await self._get_option_vote(ctx, title)
         if not vote:
             return
         
-        if await vote.remove_option(ctx.channel, option, self._config):
+        if await vote.remove_option(option):
             await ctx.message.delete()
     
     @parser("vote refresh", parent=_vote_root)
     async def refresh_votes(self, ctx: commands.Context):
-        if not self._config.has_role("expedition", ctx.author):
-            await ctx.send(embed=make_alert("Only expeditioner can use this command."))
+        if not Discord.role_check(ctx, Discord.Roles.expeditioner.id):
             return
         await ctx.message.delete()
 
         for vote in self.votes.values():
-            await vote.refresh(self._config, self.expeditioners)
+            await vote.refresh(self.expeditioners)
 
 class Vote:
 
@@ -227,12 +210,12 @@ class Vote:
         subtext = "default vote: " + self.options[self.default] if self.default else None
         return make_alert(text, subtext=subtext, title=title, color=COLOR_INFO)
 
-    def make_member_embed(self, expeditioners, config: Configuration) -> Embed:
+    def make_member_embed(self, expeditioners) -> Embed:
         names = set()
 
         votedCount = 0
         for id_ in expeditioners:
-            name = config.guild.get_member(id_).display_name.split(" ")[-1]
+            name = Discord.guild.get_member(id_).display_name.split(" ")[-1]
             if self.vote[id_]:
                 name = f"~~{name}~~"
                 votedCount += 1
@@ -247,34 +230,32 @@ class Vote:
         embed.add_field(name="Expeditioners:", value=", ".join(names))
         return embed
     
-    async def add_expeditioner(self, id_, config):
+    async def add_expeditioner(self, id_):
         self.vote[id_] = None
-        await self.update_member_msg(config)
+        await self.update_member_msg()
     
-    async def remove_expeditioner(self, id_, config):
+    async def remove_expeditioner(self, id_):
         del self.vote[id_]
-        await self.update_member_msg(config)
+        await self.update_member_msg()
 
-    async def update_member_msg(self, config: Configuration):
-        embed = self.make_member_embed(list(self.vote.keys()), config)
-        channel: TextChannel = config.guild.get_channel(config("channel.expedition"))
-        msg = await channel.fetch_message(self.memberMsg)
+    async def update_member_msg(self):
+        embed = self.make_member_embed(list(self.vote.keys()))
+        msg = await Discord.Channels.expedition.fetch_message(self.memberMsg)
         await msg.edit(embed=embed)
     
-    async def refresh(self, config: Configuration, expeditioners):
-        channel: TextChannel = config.guild.get_channel(config("channel.expedition"))
-
-        msg = await channel.fetch_message(self.memberMsg)
+    async def refresh(self, expeditioners):
+        msg = await Discord.Channels.expedition.fetch_message(self.memberMsg)
         await msg.delete()
-        msg = await channel.fetch_message(self.voteMsg)
+        msg = await Discord.Channels.expedition.fetch_message(self.voteMsg)
         await msg.delete()
         
-        await self._send_messages(channel, expeditioners, config)
+        await self._send_messages(expeditioners)
     
-    async def _send_messages(self, channel, expeditioners, config):
-        msg = await channel.send(embed=self.make_member_embed(expeditioners, config))
+    async def _send_messages(self, expeditioners):
+        msg = await Discord.Channels.expedition.send(
+            embed=self.make_member_embed(expeditioners))
         self.memberMsg = msg.id
-        msg = await channel.send(embed=self.make_vote_embed())
+        msg = await Discord.Channels.expedition.send(embed=self.make_vote_embed())
         self.voteMsg = msg.id
 
         for emoji in self.options:
@@ -283,9 +264,9 @@ class Vote:
         
         await msg.pin(reason="Vote message.")
 
-    async def start(self, channel: TextChannel, expeditioners, config):
+    async def start(self, expeditioners):
         self.vote = {id_: None for id_ in expeditioners}
-        await self._send_messages(channel, expeditioners, config)
+        await self._send_messages(expeditioners)
     
     def should_auto_end(self):
         if not self.target:
@@ -297,7 +278,7 @@ class Vote:
                 return True
         return False
     
-    async def end(self, channel: TextChannel, anonymous, config: Configuration):
+    async def end(self, anonymous):
         maxDescLen = max(max(map(len, self.options.values())), 6) + 2
 
         entries = [f"# {self.title} #"]
@@ -324,13 +305,14 @@ class Vote:
                 totalPercent = int(count / len(self.vote) * 100)
                 entries.append(template % (desc, count, votePercent, totalPercent))
         
-        await channel.send(decorate_text("\n".join(entries), sh="apache"))
+        await Discord.Channels.expedition.send(
+            decorate_text("\n".join(entries), sh="apache"))
 
         if not anonymous:
             nameMap = {emoji: set()  for emoji in self.options}
             for id_, emoji in self.vote.items():
                 if emoji:
-                    name = config.guild.get_member(id_).display_name.split(" ")[-1]
+                    name = Discord.guild.get_member(id_).display_name.split(" ")[-1]
                     nameMap[emoji].add(name)
             
             embed = Embed()
@@ -338,9 +320,9 @@ class Vote:
                 names = ", ".join(names) if names else "No one"
                 embed.add_field(name=self.options[emoji], value=names)
             
-            await channel.send(embed=embed)
+            await Discord.Channels.expedition.send(embed=embed)
         
-        message = await channel.fetch_message(self.voteMsg)
+        message = await Discord.Channels.expedition.fetch_message(self.voteMsg)
         await message.unpin(reason="Vote ended")
     
     async def check(self, ctx):
@@ -349,9 +331,9 @@ class Vote:
             return
         return True
 
-    async def set_vote(self, id_, emoji, config):
+    async def set_vote(self, id_, emoji):
         self.vote[id_] = emoji
-        await self.update_member_msg(config)
+        await self.update_member_msg()
 
 
 class BinaryVote(Vote):
@@ -383,29 +365,29 @@ class OptionVote(Vote):
             return
         return True
     
-    async def start(self, channel, expeditioners, config):
+    async def start(self, expeditioners):
         self.default = \
             NUMBER_EMOJIS[self.options.index(self.default)] if self.default else None
         self.options = {NUMBER_EMOJIS[i]: s for i, s in enumerate(self.options)}
-        await super().start(channel, expeditioners, config)
+        await super().start(expeditioners)
     
-    async def add_option(self, channel: TextChannel, option):
+    async def add_option(self, option):
         if len(self.options) == 10:
-            await channel.send(embed=make_alert("Can't add more option."))
+            await Discord.Channels.expedition.send(embed=make_alert("Can't add more option."))
             return
         
         emoji = NUMBER_EMOJIS[len(self.options)]
         self.options[emoji] = option
         
-        msg: Message = await channel.fetch_message(self.voteMsg)
+        msg: Message = await Discord.Channels.expedition.fetch_message(self.voteMsg)
         await msg.add_reaction(emoji)
         await msg.edit(embed=self.make_vote_embed())
         
         return True
     
-    async def remove_option(self, channel: TextChannel, option, config):
+    async def remove_option(self, option):
         if option not in self.options.values():
-            await channel.send("There are no such option.")
+            await Discord.Channels.expedition.send("There are no such option.")
             return
         
         hasRemoved = False
@@ -429,11 +411,11 @@ class OptionVote(Vote):
                     newOptions[emoji] = desc
         self.options = newOptions
 
-        msg: Message = await channel.fetch_message(self.voteMsg)
+        msg: Message = await Discord.Channels.expedition.fetch_message(self.voteMsg)
         await msg.remove_reaction(emoji, msg.author)
         await msg.edit(embed=self.make_vote_embed())
 
-        await self.update_member_msg(config)
+        await self.update_member_msg()
 
         return True
 

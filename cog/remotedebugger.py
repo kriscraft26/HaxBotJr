@@ -13,7 +13,8 @@ from msgmaker import *
 from reactablemessage import ListSelectionMessage, ReactableMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil
-from cog.configuration import Configuration
+from util.discordutil import Discord
+from state.config import Config
 
 
 class RemoteDebugger(commands.Cog):
@@ -21,8 +22,6 @@ class RemoteDebugger(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.debugArchives = []
         self.infoArchives = []
-
-        self._config: Configuration = bot.get_cog("Configuration")
 
         self._search_archives()
 
@@ -111,4 +110,4 @@ class RemoteDebugger(commands.Cog):
         await ctx.message.add_reaction("✅")
 
     async def cog_check(self, ctx: commands.Context):
-        return await self._config.perm_check(ctx, "user.dev")
+        return await Discord.user_check(ctx, *Config.user_dev)

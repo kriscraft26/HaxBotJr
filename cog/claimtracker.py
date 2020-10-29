@@ -8,9 +8,10 @@ from msgmaker import *
 from reactablemessage import PagedMessage
 from util.timeutil import now, add_tz_info
 from util.cmdutil import parser
+from util.discordutil import Discord
+from state.config import Config
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
-from cog.configuration import Configuration
 
 
 CLAIM_UPDATE_INTERVAL = 6
@@ -25,7 +26,6 @@ class ClaimTracker(commands.Cog):
         self._claimNameOrder = []
         self._allTerrs = set()
 
-        self._config: Configuration = bot.get_cog("Configuration")
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._terrListTracker = wynnAPI.terrList.get_tracker()
 
@@ -77,7 +77,7 @@ class ClaimTracker(commands.Cog):
                 else:
                     emoji = "🏹"
                 text = f"{emoji} **{claim}**  __{prevGuild}__  ->  __{currGuild}__"
-                await self._config.send("claimLog", text)
+                await Discord.send(Config.channel_claimLog, text)
 
             acquired = self._parse_acquired(claimList[claim]["acquired"])
             self._claims[claim]["acquired"] = acquired
@@ -97,7 +97,7 @@ class ClaimTracker(commands.Cog):
         Logger.bot.debug("starting claim update loop")
     
     def schedule_alert(self):
-        if self._config("role.claimAlert") and not self._alertStatus:
+        if Config.role_claimAlert and not self._alertStatus:
             Logger.bot.info(f"claim alert is scheduled")
             if self._alert.is_running():
                 self._alert.restart()
@@ -133,10 +133,10 @@ class ClaimTracker(commands.Cog):
         self._alertStatus = 2
         
         text = self._make_alert_text()
-        self._alertMsg = await self._config.send("claimAlert", text)
+        self._alertMsg = await Discord.send(Config.channel_claimAlert, text)
 
         statusText = "*Please reclaim our missing territories.*"
-        self._alertStatusMsg = await self._config.send("claimAlert", statusText)
+        self._alertStatusMsg = await Discord.send(Config.channel_claimAlert, statusText)
 
         self._alert.stop()
     
@@ -146,13 +146,11 @@ class ClaimTracker(commands.Cog):
         if not missing:
             return None
 
-        roleId = self._config('role.claimAlert')
-
         missingNum = len(missing)
         if missingNum == 1:
-            text = f"⚠️  **1 claim is missing**  <@&{roleId}>"
+            text = f"⚠️  **1 claim is missing**  <@&{Config.role_claimAlert}>"
         else:
-            text = f"⚠️  **{len(missing)} claims are missing**  <@&{roleId}>"
+            text = f"⚠️  **{len(missing)} claims are missing**  <@&{Config.role_claimAlert}>"
 
         entries = []
         maxTerrLen = max(map(len, missing))
@@ -207,7 +205,7 @@ class ClaimTracker(commands.Cog):
     
     @parser("claim add", "terrs...", parent=display_claims)
     async def add_claims(self, ctx: commands.Context, terrs):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
 
         terrs = set(terrs)
@@ -233,7 +231,7 @@ class ClaimTracker(commands.Cog):
     
     @parser("claim remove", "terrs...", parent=display_claims)
     async def remove_claims(self, ctx: commands.Context, terrs):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
 
         terrs = set(terrs)
@@ -257,7 +255,7 @@ class ClaimTracker(commands.Cog):
 
     @parser("claim alert", parent=display_claims, isGroup=True)
     async def get_alert_status(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.trusted"):
+        if not await Discord.rank_check(ctx, "Pilot"):
             return
         text = ["not scheduled", "scheduled", "active", "disabled"][self._alertStatus]
         if self._alertStatus == 1:
@@ -270,7 +268,7 @@ class ClaimTracker(commands.Cog):
     
     @parser("claim alert cancel", parent=get_alert_status)
     async def cancel_alert(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.trusted"):
+        if not await Discord.rank_check(ctx, "Pilot"):
             return
         await self.dismiss_alert()
         await ctx.message.add_reaction("✅")

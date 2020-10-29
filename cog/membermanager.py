@@ -10,8 +10,9 @@ from msgmaker import *
 from reactablemessage import PagedMessage
 from leaderboard import LeaderBoard
 from util.cmdutil import parser
+from util.discordutil import Discord
+from state.config import Config
 from cog.wynnapi import WynnAPI
-from cog.configuration import Configuration
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -58,7 +59,6 @@ class MemberManager(commands.Cog):
         self._wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._guildStatsTracker = self._wynnAPI.guildStats.get_tracker()
         self._igMembers: Set[str] = set()
-        self._config: Configuration = bot.get_cog("Configuration")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._snapshotManager.add("MemberManager", self)
@@ -105,7 +105,8 @@ class MemberManager(commands.Cog):
             if joined:
                 Logger.bot.info(f"{joinTracked} status set to active")
                 for ign in joined:
-                    await self._config.send("memberLog", ign + " has joined the guild")
+                    text = ign + " has joined the guild"
+                    await Discord.send(Config.channel_memberLog, text)
                 for id_ in joinedIds:
                     await Event.broadcast("memberTrack", id_)
             
@@ -116,7 +117,8 @@ class MemberManager(commands.Cog):
             if removed:
                 Logger.bot.info(f"{removeTracked} status set to idle")
                 for ign in removed:
-                    await self._config.send("memberLog", ign + " has left the guild")
+                    text = ign + " has left the guild"
+                    await Discord.send(Config.channel_memberLog, text)
                 for id_ in removedIds:
                     await Event.broadcast("memberUnTrack", id_)
     
@@ -128,7 +130,7 @@ class MemberManager(commands.Cog):
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
         isGMemberBefore = before.id in self.members
-        isGMemberAfter = self._config.is_of_group("guild", after)
+        isGMemberAfter = Discord.get_rank(after)
 
         if isGMemberBefore and not isGMemberAfter:
             await self._remove_member(self.members[after.id])
@@ -161,7 +163,7 @@ class MemberManager(commands.Cog):
         Logger.bot.info(f"{self.members[id_].ign} status set to active")
 
     async def _update_guild_info(self, gMember: GuildMember, dMember: Member):
-        currRank, vRank = self._config.get_rank(dMember)
+        currRank, vRank = Discord.get_rank(dMember)
         change = [gMember.rank, currRank]
         if gMember.rank != currRank:
             Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
@@ -187,7 +189,7 @@ class MemberManager(commands.Cog):
         gMember.discord = f"{dMember.name}#{dMember.discriminator}"
 
     async def _bulk_update_members(self):
-        currGuildDMembers = self._config.get_all_guild_members()
+        currGuildDMembers = filter(Discord.get_rank, Discord.guild.members)
         currGuildDMembers = {m.id: m for m in currGuildDMembers}
 
         currGuildMemberIds = set(currGuildDMembers.keys())
@@ -228,7 +230,7 @@ class MemberManager(commands.Cog):
 
             LeaderBoard.force_add_entry(id_, statsInfo)
         else:
-            ranks = self._config.get_rank(dMember)
+            ranks = Discord.get_rank(dMember)
             ign = dMember.nick.split(" ")[-1]
             mcId = await self._wynnAPI.get_player_id(ign)
             if not mcId:
@@ -347,7 +349,7 @@ class MemberManager(commands.Cog):
 
     @parser("members missing", "-snap", parent=display_members)
     async def display_missing_members(self, ctx: commands.Context, snap):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         if snap:
             text = await self._snapshotManager.get_snapshot_cmd(ctx, snap,
@@ -360,7 +362,7 @@ class MemberManager(commands.Cog):
 
     @parser("members fix", parent=display_members)
     async def fix_members(self, ctx):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         for member in self.members.values():
             member.mcId = await self._wynnAPI.get_player_id(member.ign)

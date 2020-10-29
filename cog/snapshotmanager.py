@@ -12,8 +12,8 @@ from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
-from cog.configuration import Configuration
-
+from util.discordutil import Discord
+from state.config import Config
 
 class SnapshotManager(commands.Cog):
 
@@ -21,8 +21,6 @@ class SnapshotManager(commands.Cog):
         self._objects = {}
         self._snapCache = {}
 
-        self._config: Configuration = bot.get_cog("Configuration")
-    
     def add(self, id_, obj):
         self._objects[id_] = obj
     
@@ -105,7 +103,7 @@ class SnapshotManager(commands.Cog):
 
     @parser("snap forcemake", parent=display_snapshots)
     async def force_make_snapshot(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         snapId = self.save_snapshot(offset=False)
         await ctx.send(embed=make_alert(f"Snapshot saved with the id {snapId}",
@@ -113,7 +111,7 @@ class SnapshotManager(commands.Cog):
     
     @parser("snap data", "index", parent=display_snapshots)
     async def get_snapshot_data(self, ctx: commands.Context, index: str):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         snapId = await self.parse_index(ctx, index)
         if not snapId:

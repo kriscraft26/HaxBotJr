@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from msgmaker import decorate_text, make_alert, COLOR_INFO
 from util.cmdutil import parser
-from cog.configuration import Configuration
+from util.discordutil import Discord
 
 
 HELP_FOLDER = "./help/"
@@ -15,21 +15,13 @@ HELP_FOLDER = "./help/"
 class Help(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        self._config: Configuration = bot.get_cog("Configuration")
-
+        #TODO add W for pilot+ 
         self.permChecks = {
-            "S": lambda m: self._config.is_of_group("staff", m),
-            "T": lambda m: self._config.is_of_group("trusted", m),
-            "E": lambda m: self._config.has_role("expedition", m),
-            "R": lambda m: self._invite_perm_check(m)
+            "S": lambda m: Discord.have_min_rank(m, "Cosmonaut"),
+            "T": lambda m: Discord.have_min_rank(m, "Strategist"),
+            "E": lambda m: Discord.have_role(m, Discord.Roles.expeditioner.id),
+            "R": lambda m: Discord.have_min_rank(m, "Rocketeer")
         }
-    
-    def _invite_perm_check(self, m: Member):
-        rank = self._config.get_rank(m)
-        if not rank:
-            return False
-        rank = rank[0]
-        return rank not in ["MoonWalker", "Cadet"]
 
     @parser("help", "cmd*")
     async def get_help(self, ctx: commands.Context, cmd):

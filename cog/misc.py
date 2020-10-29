@@ -7,16 +7,13 @@ from discord.ext import commands
 from discord.utils import find
 
 from util.cmdutil import parser
-from cog.configuration import Configuration
+from util.discordutil import Discord
 
 
 class Misc(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        config: Configuration = bot.get_cog("Configuration")
-
-        self.quoteChannel: TextChannel  = find(
-            lambda c: c.name == "hax-quotes", config.guild.channels)
+        self.quoteChannel: TextChannel  = Discord.parse_channel("hax-quotes")
         self.quoteTimeMin = datetime(year=2020, month=7, day=19)
 
     @parser("quote", ["image"])

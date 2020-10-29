@@ -7,11 +7,12 @@ from msgmaker import *
 from leaderboard import LeaderBoard
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
+from util.discordutil import Discord
+from state.config import Config
 from cog.datamanager import DataManager
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
 from cog.snapshotmanager import SnapshotManager
-from cog.configuration import Configuration
 
 
 WAR_SERVERS_UPDATE_INTERVAL = 3
@@ -29,7 +30,6 @@ class WarTracker(commands.Cog):
         self._serverListTracker = wynnAPI.serverList.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
-        self._config: Configuration = bot.get_cog("Configuration")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("warCount")
 
@@ -114,7 +114,7 @@ class WarTracker(commands.Cog):
     
     @parser("wc fix", parent=display_war_count_lb)
     async def fix_wc(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         id_ = self._memberManager.ignIdMap["chriscold10"]
         self._lb._total[id_] = self._lb.get_total(id_) + 32

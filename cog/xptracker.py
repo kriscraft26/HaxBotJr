@@ -5,9 +5,10 @@ from msgmaker import *
 from leaderboard import LeaderBoard
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
+from util.discordutil import Discord
+from state.config import Config
 from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
-from cog.configuration import Configuration
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -25,7 +26,6 @@ class XPTracker(commands.Cog):
         wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
         self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
-        self._config: Configuration = bot.get_cog("Configuration")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
@@ -74,7 +74,7 @@ class XPTracker(commands.Cog):
                 f"__Total__ -> {self._lb.get_total(id_):,}",
                 f"__Acc__ -> {self._lb.get_acc(id_):,}",
                 f"__BW__ -> {self._lb.get_bw(id_):,}"])
-            await self._config.send("xpLog", text)
+            await Discord.send(Config.channel_xpLog, text)
             self._lastLoggedVal[id_] = stat
     
     @_xp_log.before_loop
@@ -98,7 +98,7 @@ class XPTracker(commands.Cog):
     
     @parser("xp fix", parent=display_xp_lb)
     async def fix_xp(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         id_ = self._memberManager.ignIdMap["chriscold10"]
         self._lb._total[id_] = self._lb.get_total(id_) + 23346331

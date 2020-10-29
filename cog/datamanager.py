@@ -4,6 +4,7 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from util.pickleutil import PickleUtil
+from state.state import State
 
 
 SAVE_INTERVAL = 10  # in minutes
@@ -80,6 +81,7 @@ class DataManager(commands.Cog):
                 dataFile = self.make_data_file_path(obj)
                 Logger.bot.debug(f"saving {obj} {attrMap} into {dataFile}")
                 PickleUtil.save(dataFile, attrMap)
+        State.save()
 
     def cog_unload(self):
         self.save()

@@ -8,9 +8,10 @@ from msgmaker import decorate_text
 from leaderboard import LeaderBoard
 from util.cmdutil import parser
 import util.timeutil as timeutil
+from util.discordutil import Discord
+from state.config import Config
 from cog.remotedebugger import RemoteDebugger
 from cog.snapshotmanager import SnapshotManager
-from cog.configuration import Configuration
 from cog.activitytracker import ActivityTracker
 
 
@@ -26,7 +27,6 @@ class DateClock(commands.Cog):
 
         self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
-        self._config: Configuration = bot.get_cog("Configuration")
         self._actTracker: ActivityTracker = bot.get_cog("ActivityTracker")
 
         self._update_loop_interval()
@@ -56,7 +56,9 @@ class DateClock(commands.Cog):
     async def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
         self._snapshotManager.save_snapshot()
-        await self._config.send("bwReport", LeaderBoard.get_lb("xp").create_bw_report())
+        await Discord.send(Config.channel_bwReport, )
+        for seg in Discord.split_text(LeaderBoard.get_lb("xp").create_bw_report()):
+            await Discord.send(Config.channel_bwReport, seg)
         LeaderBoard.reset_all_bw()
         self._actTracker.biweekly_reset()
 
@@ -77,10 +79,11 @@ class DateClock(commands.Cog):
     
     @parser("trigger", ["cbType", ("daily", "biweekly", "bwReport")])
     async def trigger_callback(self, ctx: commands.Context, cbType):
-        if not await self._config.perm_check(ctx, "user.dev"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         if cbType == "bwReport":
-            await self._config.send("bwReport", LeaderBoard.get_lb("xp").create_bw_report())
+            for seg in Discord.split_text(LeaderBoard.get_lb("xp").create_bw_report()):
+                await Discord.send(Config.channel_bwReport, seg)
             return
         func = self._daily_callback if cbType == "daily" else self._bw_callback
         await func()

@@ -1,26 +1,31 @@
 import pickle
 import os
 
-def save(path, data):
-    with open(path, "wb") as file:
-        pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+class Data(dict):
+
+    def __init__(self, name):
+        super().__init__()
+        self.path = f"./data/{name}.data"
+        with open(self.path, "rb") as file:
+            self.data: dict = pickle.load(file)
+    
+    def save(self, newName=None):
+        if newName:
+            self.path = f"./data/{newName}.data"
+        with open(self.path, "wb") as file:
+            pickle.dump(self.data, file, pickle.HIGHEST_PROTOCOL)
+    
+    def rename(self, nameMap):
+        for old, new in nameMap.items():
+            self.data[new] = self.data.pop(old)
 
 
-def load(path, initData=None):
-    if not os.path.isfile(path):
-        save(path, initData)
-        return initData
-
-    obj = None
-    with open(path, "rb") as file:
-        obj = pickle.load(file)
-    return obj
-
-
-config = load("./data/Configuration.data")
-config["_config"]["vrole.visual"] = config["_config"]["role.visual"]
-del config["_config"]["role.visual"]
-config["_config"]["vrole.personal"] = config["_config"]["role.personal"]
-del config["_config"]["role.personal"]
-
-save("./data/Configuration.data", config)
+config = Data("Configuration")
+config.data = config.data["_config"]
+del config.data["channel.expedition"]
+del config.data["role.expedition"]
+del config.data["user.ignore"]
+del config.data["vrole.visual"]
+del config.data["vrole.personal"]
+config.rename({name: name.replace(".", "_") for name in config.data})
+config.save(newName="Config")

@@ -4,15 +4,13 @@ from discord.ext import commands
 from msgmaker import make_alert
 from reactablemessage import ConfirmMessage
 from util.cmdutil import parser
-from cog.configuration import Configuration
+from util.discordutil import Discord
 
 
 class DiscordTools(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
-        self._config: Configuration = bot.get_cog("Configuration")
 
         self.guildRoles = (
             # ranks
@@ -34,24 +32,25 @@ class DiscordTools(commands.Cog):
     
     def _map_roles(self, roleNames):
         roles = []
-        for role in self._config.guild.roles:
+        for role in Discord.guild.roles:
             if role.name in roleNames:
                 roles.append(role)
         return roles
     
     @parser("kick", "member")
     async def kick_member(self, ctx: commands.Context, member):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         
-        member: Member = self._config.parse_user(member)
+        member: Member = Discord.parse_user(member)
         if not member:
             await ctx.send(embed=make_alert("can't find specified member."))
             return
-        if not self._config.is_of_group("guild", member):
+        rank = Discord.get_rank(member)
+        if not rank:
             await ctx.send(embed=make_alert(f"{member.display_name} is not a guild member."))
             return
-        if self._config.is_of_group("staff", member):
+        if rank[0] == "Cosmonaut":
             await ctx.send(embed=make_alert("can't kick staff member."))
             return
         
@@ -73,14 +72,14 @@ class DiscordTools(commands.Cog):
     
     @parser("invite", "member", "ign")
     async def invite_member(self, ctx: commands.Context, member, ign):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
 
-        member: Member = self._config.parse_user(member)
+        member: Member = Discord.parse_user(member)
         if not member:
             await ctx.send(embed=make_alert("can't find specified member."))
             return
-        if self._config.is_of_group("guild", member):
+        if Discord.get_rank(member):
             await ctx.send(embed=make_alert(
                 f"{member.display_name} is already a guild member."))
             return
@@ -97,33 +96,4 @@ class DiscordTools(commands.Cog):
         await member.add_roles(*self._map_roles(self.recruitRoles), reason=reason)
 
         text = f"<@!{member.id}> welcome to the guild! 🥳"
-        await self._config.guildChat.send(text)
-    
-    async def set_rank(self, ctx: commands.Context, member, rank):
-        if not await self._config.perm_check(ctx, "group.trusted"):
-            return
-
-        member: Member = self._config.parse_user(member)
-        if not member:
-            await ctx.send(embed=make_alert("can't find specified member."))
-            return
-        if rank not in ["Recruit", "Recruiter", "Trial-Captain", "Captain"]:
-            await ctx.send(embed=make_alert("Invalid rank."))
-            return
-        if rank in ["Trial-Captain", "Captain"]:
-            if self._config.is_of_group("staff", ctx.author):
-                text = "You don't have permission to set (Trial-)Captain rank."
-                await ctx.send(embed=make_alert(text))
-                return
-        
-        text = f"Are you sure to give {member.display_name} {rank}?"
-        await ConfirmMessage(ctx, text, None,
-            self._set_rank_cb, member, rank, ctx.author).init()
-    
-    async def _set_rank_cb(self, member: Member, rank, executor: Member):
-        removeManagerRoles = rank in ["Recruit", "Recruiter"]
-
-        roles = []
-        for role in member.roles:
-            if removeManagerRoles and role.name in self.mamagerRoles:
-                continue
+        await Discord.Channels.guild.send(text)

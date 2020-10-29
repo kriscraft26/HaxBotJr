@@ -10,6 +10,9 @@ from logger import Logger
 from leaderboard import LeaderBoard
 from msgmaker import make_alert, COLOR_ERROR
 from reactablemessage import ReactableMessage
+from util.discordutil import Discord
+from state.state import State
+from state.config import Config
 from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
@@ -37,11 +40,15 @@ class HaxBotJr(commands.Bot):
         Logger.init()
         Logger.bot.debug("logged in as %s" % self.user)
 
+        Discord.init(self)
+
+        await State.load(Config)
+
         await DataManager.load(LeaderBoard("xp", Logger.xp))
         await DataManager.load(LeaderBoard("emerald", Logger.em))
         await DataManager.load(LeaderBoard("warCount", Logger.war))
 
-        self.add_cog(await DataManager.load(Configuration(self)))
+        self.add_cog(Configuration(self))
         self.add_cog(WynnAPI(self, HaxBotJr.session))
         self.add_cog(SnapshotManager(self))
         self.add_cog(await DataManager.load(MemberManager(self)))

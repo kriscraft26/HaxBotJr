@@ -7,8 +7,8 @@ from leaderboard import LeaderBoard
 from reactablemessage import ReactableMessage, PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now
+from util.discordutil import Discord
 from cog.datamanager import DataManager
-from cog.configuration import Configuration
 from cog.membermanager import MemberManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -21,7 +21,6 @@ class EmeraldTracker(commands.Cog):
         self.parseAlert: ReactableMessage = None
         self.lastUpdateTimeStr = "owo"
 
-        self._config: Configuration = bot.get_cog("Configuration")
         self._memberManager: MemberManager= bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
@@ -91,7 +90,7 @@ class EmeraldTracker(commands.Cog):
 
     @parser("em parse", parent=display_emerald)
     async def start_parse(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.trusted"):
+        if not await Discord.rank_check(ctx, "Strategist"):
             return
 
         if self.provider:
