@@ -25,11 +25,13 @@ class ReactableMessage:
         self._reactions[reaction] = (cb, args, kwargs)
         if self.msg and not override:
             await self.msg.add_reaction(reaction)
+            await sleep(0.25)
     
     async def remove_callback(self, reaction):
         self._reactions.pop(reaction, 0)
         if self.msg:
             await self.msg.remove_reaction(reaction, self.msg.author)
+            await sleep(0.25)
     
     async def _init_send(self) -> Message:
         raise NotImplementedError()
@@ -39,6 +41,7 @@ class ReactableMessage:
         
         for reaction in self._reactions:
             await self.msg.add_reaction(reaction)
+            await sleep(0.25)
         
         if self.track:
             if len(ReactableMessage.activeMsg) == ReactableMessage.MAX_ACTIVE_MESSAGE:
@@ -49,7 +52,7 @@ class ReactableMessage:
         if self.track:
             ReactableMessage.activeMsg.remove(self)
             for reaction in self._reactions:
-                await sleep(0.5)
+                await sleep(0.25)
                 await self.msg.remove_reaction(reaction, self.msg.author)
     
     async def edit_message(self, **editArgs):
