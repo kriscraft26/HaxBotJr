@@ -15,10 +15,10 @@ HELP_FOLDER = "./help/"
 class Help(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        #TODO add W for pilot+ 
         self.permChecks = {
             "S": lambda m: Discord.have_min_rank(m, "Cosmonaut"),
             "T": lambda m: Discord.have_min_rank(m, "Strategist"),
+            "W": lambda m: Discord.have_min_rank(m, "Pilot"),
             "E": lambda m: Discord.have_role(m, Discord.Roles.expeditioner.id),
             "R": lambda m: Discord.have_min_rank(m, "Rocketeer")
         }

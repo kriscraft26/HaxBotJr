@@ -21,8 +21,8 @@ S`members missing [-s KEY]`: display list of in-game guild members that are miss
 `claim`: display claims status.
 S`claim add [terrs ...]`: add territories to the claim list.
 S`claim remove [terrs ...]`: remove territories from the claim list.
-T`claim alert`: display claim alert status.
-T`claim alert cancel`: cancel scheduled or active claim alert.
+W`claim alert`: display claim alert status.
+W`claim alert cancel`: cancel scheduled or active claim alert.
 
 
 S=Configuration=
@@ -30,7 +30,6 @@ S=Configuration=
 `config channel {NAME} [-r] [-s CHANNEL]`: display and change channel.* fields.
 `config role {NAME} [-r] [-s ROLE]` : display and change role.* fields.
 `config user {NAME} [-r USER] [-a USER]`: display and change user.* fields.
-`config vrole {NAME} [-e VROLE] [-r ITEM] [-a ITEM]`: display and change vrole.* fields.
 
 
 E=Votation=

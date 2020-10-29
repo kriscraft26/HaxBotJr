@@ -4,7 +4,7 @@ restriction: chief+
 `config`
 
 Display the configuration field list.
-The fields are in the format of "TYPE.NAME", for example `channel.xpLog`.
+The fields are in the format of "TYPE_NAME", for example `channel_xpLog`.
 
 Each field has its corresponding access/modify command, in the form of `config TYPE NAME`.
 
