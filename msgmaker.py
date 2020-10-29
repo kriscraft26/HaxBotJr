@@ -3,7 +3,7 @@ from math import ceil
 
 from discord import Embed
 
-from cog.wynnapi import WynnData
+from wynnapi import WynnData
 
 
 COLOR_ERROR = 0xfe5e41

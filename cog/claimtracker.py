@@ -4,6 +4,7 @@ from math import trunc
 from discord.ext import commands, tasks
 
 from logger import Logger
+from wynnapi import WynnAPI
 from msgmaker import *
 from reactablemessage import PagedMessage
 from util.timeutil import now, add_tz_info
@@ -11,7 +12,6 @@ from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
 from cog.datamanager import DataManager
-from cog.wynnapi import WynnAPI
 
 
 CLAIM_UPDATE_INTERVAL = 6
@@ -26,8 +26,7 @@ class ClaimTracker(commands.Cog):
         self._claimNameOrder = []
         self._allTerrs = set()
 
-        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._terrListTracker = wynnAPI.terrList.get_tracker()
+        self._terrListTracker = WynnAPI.terrList.get_tracker()
 
         self._hasInitClaimUpdate = False
         # -1 = disabled

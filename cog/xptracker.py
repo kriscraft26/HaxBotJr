@@ -1,13 +1,13 @@
 from discord.ext import tasks, commands
 
 from logger import Logger
+from wynnapi import WynnAPI
 from msgmaker import *
 from leaderboard import LeaderBoard
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
-from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
@@ -23,8 +23,7 @@ class XPTracker(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._guildStatsTracker = wynnAPI.guildStats.get_tracker()
+        self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 

@@ -6,13 +6,13 @@ from discord.ext import tasks, commands
 
 from logger import Logger
 from event import Event
+from wynnapi import WynnAPI
 from msgmaker import *
 from reactablemessage import PagedMessage
 from leaderboard import LeaderBoard
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
-from cog.wynnapi import WynnAPI
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -56,8 +56,7 @@ class MemberManager(commands.Cog):
 
         self.hasInitMembersUpdate = False
 
-        self._wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._guildStatsTracker = self._wynnAPI.guildStats.get_tracker()
+        self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
         self._igMembers: Set[str] = set()
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
@@ -232,7 +231,7 @@ class MemberManager(commands.Cog):
         else:
             ranks = Discord.get_rank(dMember)
             ign = dMember.nick.split(" ")[-1]
-            mcId = await self._wynnAPI.get_player_id(ign)
+            mcId = await WynnAPI.get_player_id(ign)
             if not mcId:
                 Logger.bot.warning(f"unable to find mc uuid of {ign}")
             gMember = GuildMember(dMember, *ranks, ign, mcId)
@@ -365,5 +364,5 @@ class MemberManager(commands.Cog):
         if not await Discord.user_check(ctx, *Config.user_dev):
             return
         for member in self.members.values():
-            member.mcId = await self._wynnAPI.get_player_id(member.ign)
+            member.mcId = await WynnAPI.get_player_id(member.ign)
             await sleep(0.2)

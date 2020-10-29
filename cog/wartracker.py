@@ -3,6 +3,7 @@ from typing import Set, Dict, List
 from discord.ext import commands, tasks
 
 from logger import Logger
+from wynnapi import WynnAPI
 from msgmaker import *
 from leaderboard import LeaderBoard
 from reactablemessage import PagedMessage
@@ -10,7 +11,6 @@ from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
 from cog.datamanager import DataManager
-from cog.wynnapi import WynnAPI
 from cog.membermanager import MemberManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -26,8 +26,7 @@ class WarTracker(commands.Cog):
         self.currentWar = None
         self.hasInitUpdated = False
 
-        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._serverListTracker = wynnAPI.serverList.get_tracker()
+        self._serverListTracker = WynnAPI.serverList.get_tracker()
         self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 

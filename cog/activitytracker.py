@@ -6,6 +6,7 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from event import Event
+from wynnapi import WynnAPI
 from msgmaker import make_entry_pages, make_stat_entries, decorate_text
 from reactablemessage import PagedMessage
 from util.cmdutil import parser
@@ -14,7 +15,6 @@ from util.discordutil import Discord
 from state.config import Config
 from cog.membermanager import MemberManager
 from cog.datamanager import DataManager
-from cog.wynnapi import WynnAPI
 from cog.snapshotmanager import SnapshotManager
 
 
@@ -27,8 +27,7 @@ class ActivityTracker(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self._snapManager: SnapshotManager = bot.get_cog("SnapshotManager")
         self._memeberManager: MemberManager = bot.get_cog("MemberManager")
-        wynnAPI: WynnAPI = bot.get_cog("WynnAPI")
-        self._serverListTracker = wynnAPI.serverList.get_tracker()
+        self._serverListTracker = WynnAPI.serverList.get_tracker()
 
         self.activities = {}  # id: [actTotal, actCurr, isOnline, server]
         self.lastUpdateTime = utcNow()
