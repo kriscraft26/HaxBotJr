@@ -19,7 +19,7 @@ class Configuration(commands.Cog):
     
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        for attr, val in Config.__dict__:
+        for attr, val in Config.__dict__.items():
             if attr.startswith("channel_"):
                 if val == channel.id:
                     setattr(Config, attr, None)
@@ -27,7 +27,7 @@ class Configuration(commands.Cog):
     
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        for attr, val in Config.__dict__:
+        for attr, val in Config.__dict__.items():
             if attr.startswith("user_"):
                 if member.id in val:
                     val.remove(member.id)
@@ -35,7 +35,7 @@ class Configuration(commands.Cog):
     
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
-        for attr, val in Config.__dict__:
+        for attr, val in Config.__dict__.items():
             if attr.startswith("role_"):
                 if val == role.id:
                     setattr(Config, attr, None)
