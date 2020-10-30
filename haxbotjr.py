@@ -43,7 +43,7 @@ class HaxBotJr(commands.Bot):
         Discord.init(self)
 
         await State.load(Config)
-
+    
         await DataManager.load(LeaderBoard("xp", Logger.xp))
         await DataManager.load(LeaderBoard("emerald", Logger.em))
         await DataManager.load(LeaderBoard("warCount", Logger.war))
