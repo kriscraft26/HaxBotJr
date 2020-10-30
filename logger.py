@@ -18,7 +18,7 @@ META_FILE = LOG_FOLDER + "meta"
 MAX_DEBUG_ARCHIVE = 5
 
 
-init()
+# init()
 COLORS = {
     logging.INFO: Back.BLUE,
     logging.WARNING: Back.YELLOW,
@@ -37,7 +37,7 @@ IGNORED_WARN = [
 class CustomTermFormatter(logging.Formatter):
 
     def __init__(self):
-        super().__init__(fmt=f"%(asctime)s %(levelname)s {Style.RESET_ALL} %(message)s",
+        super().__init__(fmt=f"%(asctime)s %(levelname)s %(message)s",
             datefmt="%H:%M:%S")
 
     def format(self, record: logging.LogRecord):
@@ -68,7 +68,7 @@ debugHandler.setFormatter(formatter)
 debugHandler.setLevel(logging.DEBUG)
 
 termHandler = logging.StreamHandler(stream=stdout)
-termHandler.setFormatter(CustomTermFormatter())
+termHandler.setFormatter(formatter)
 termHandler.setLevel(logging.INFO)
 
 discordLogger = logging.getLogger("discord")
