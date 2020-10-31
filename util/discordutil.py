@@ -54,7 +54,7 @@ class Discord:
     async def send(cls, channelId, text, **kwargs):
         if not channelId:
             return
-        await cls.guild.get_channel(channelId).send(text, **kwargs)
+        return await cls.guild.get_channel(channelId).send(text, **kwargs)
     
     @classmethod
     def split_text(cls, text, chunkSize=2000):
