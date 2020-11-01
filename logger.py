@@ -34,11 +34,14 @@ IGNORED_WARN = [
 ]
 
 
-class CustomTermFormatter(logging.Formatter):
+FMT = "%(asctime)s [%(levelname)s] [%(name)s]: %(message)s"
+DATE_FMT = "%H:%M:%S"
+
+
+class CustomLogFormatter(logging.Formatter):
 
     def __init__(self):
-        super().__init__(fmt=f"%(asctime)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S")
+        super().__init__(fmt=FMT, datefmt=DATE_FMT)
 
     def format(self, record: logging.LogRecord):
         s = super().format(record)
@@ -47,17 +50,10 @@ class CustomTermFormatter(logging.Formatter):
                 statusLog["WARNING"].add(record.message)
         elif record.levelno != logging.INFO:
             statusLog[record.levelname] += 1
-        print(s, end="")
-        return ""
-
-    def formatTime(self, record, datefmt):
-        s = super().formatTime(record, datefmt)
-        levelColor = COLORS[record.levelno]
-        return f"{Style.BRIGHT}{Back.WHITE}{Fore.BLACK} {s} {Fore.LIGHTWHITE_EX}{levelColor}"
+        return s
 
 
-formatter = logging.Formatter(fmt="%(asctime)s [%(levelname)s] [%(name)s]: %(message)s", 
-    datefmt="%H:%M:%S")
+formatter = logging.Formatter(fmt=FMT, datefmt=DATE_FMT)
 
 infoHandler = logging.FileHandler(filename=LOG_FILE, mode="w", encoding="utf-8")
 infoHandler.setFormatter(formatter)
@@ -68,7 +64,7 @@ debugHandler.setFormatter(formatter)
 debugHandler.setLevel(logging.DEBUG)
 
 termHandler = logging.StreamHandler(stream=stdout)
-termHandler.setFormatter(formatter)
+termHandler.setFormatter(CustomLogFormatter())
 termHandler.setLevel(logging.INFO)
 
 discordLogger = logging.getLogger("discord")
