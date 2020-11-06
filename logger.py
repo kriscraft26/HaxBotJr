@@ -18,16 +18,6 @@ META_FILE = LOG_FOLDER + "meta"
 MAX_DEBUG_ARCHIVE = 5
 
 
-# init()
-COLORS = {
-    logging.INFO: Back.BLUE,
-    logging.WARNING: Back.YELLOW,
-    logging.ERROR: Back.RED,
-    logging.CRITICAL: Back.RED
-}
-
-
-statusLog = {"WARNING": set(), "ERROR": 0, "CRITICAL": 0}
 IGNORED_WARN = [
     "PyNaCl is not installed, voice will NOT be supported",
     "Shard ID None has stopped responding to the gateway. Closing and restarting."
@@ -37,20 +27,14 @@ IGNORED_WARN = [
 FMT = "%(asctime)s [%(levelname)s] [%(name)s]: %(message)s"
 DATE_FMT = "%H:%M:%S"
 
-
-class CustomLogFormatter(logging.Formatter):
+class CustomHandler(logging.Handler):
 
     def __init__(self):
-        super().__init__(fmt=FMT, datefmt=DATE_FMT)
+        super().__init__(logging.WARNING)
 
-    def format(self, record: logging.LogRecord):
-        s = super().format(record)
-        if record.levelno == logging.WARNING:
-            if record.message not in IGNORED_WARN:
-                statusLog["WARNING"].add(record.message)
-        elif record.levelno != logging.INFO:
-            statusLog[record.levelname] += 1
-        return s
+    def emit(self, record: logging.LogRecord):
+        if record.message not in IGNORED_WARN:
+            print(self.format(record))
 
 
 formatter = logging.Formatter(fmt=FMT, datefmt=DATE_FMT)
@@ -63,9 +47,8 @@ debugHandler = logging.FileHandler(filename=DEBUG_FILE, mode="w", encoding="utf-
 debugHandler.setFormatter(formatter)
 debugHandler.setLevel(logging.DEBUG)
 
-termHandler = logging.StreamHandler(stream=stdout)
-termHandler.setFormatter(CustomLogFormatter())
-termHandler.setLevel(logging.INFO)
+termHandler = CustomHandler()
+termHandler.setFormatter(formatter)
 
 discordLogger = logging.getLogger("discord")
 discordLogger.setLevel(logging.INFO)

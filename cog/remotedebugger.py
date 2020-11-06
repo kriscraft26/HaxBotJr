@@ -8,7 +8,7 @@ from typing import List
 from discord import File, Message
 from discord.ext import commands
 
-from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE, statusLog, Logger
+from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE, Logger
 from msgmaker import *
 from reactablemessage import ListSelectionMessage, ReactableMessage
 from util.cmdutil import parser
@@ -86,28 +86,6 @@ class RemoteDebugger(commands.Cog):
     def add_archives(self, infoArchiveName, debugArchiveName):
         self.infoArchives.append(infoArchiveName)
         self.debugArchives.append(debugArchiveName)
-    
-    @parser("debug status", parent=debug_root, isGroup=True)
-    async def display_status(self, ctx: commands.Context):
-        await ctx.send(decorate_text("  |  ".join([
-            "WARNING: %d" % len(statusLog["WARNING"]),
-            "ERROR: %d" % statusLog["ERROR"],
-            "CRITICAL: %d" % statusLog["CRITICAL"]
-        ])))
-    
-    @parser("debug warn", parent=debug_root)
-    async def display_warnings(self, ctx: commands.Context):
-        if not statusLog["WARNING"]:
-            await ctx.send("`Empty`")
-            return
-        await ctx.send(decorate_text("\n".join(statusLog["WARNING"])))
-        statusLog["WARNING"].clear()
-
-    @parser("debug status clear", parent=display_status)
-    async def clear_status(self, ctx: commands.Context):
-        statusLog["ERROR"] = 0
-        statusLog["CRITICAL"] = 0
-        await ctx.message.add_reaction("✅")
 
     async def cog_check(self, ctx: commands.Context):
         return await Discord.user_check(ctx, *Config.user_dev)
