@@ -86,6 +86,9 @@ class SnapshotManager(commands.Cog):
 
         result = snapshot
         for path in paths:
+            if path not in result:
+                await ctx.send("`The requested command was not saved in the given snapshot.`")
+                return
             result = result[path]
         return result
     
