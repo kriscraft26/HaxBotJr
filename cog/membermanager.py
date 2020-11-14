@@ -141,7 +141,7 @@ class MemberManager(commands.Cog):
         joined = currDiscordIds.difference(prevDiscordIds)
         for id_ in joined:
             dMember = Discord.guild.get_member(id_)
-            memberId = await GuildMember.add(dMember, Discord.get_rank)
+            memberId = await GuildMember.add(dMember, Discord.get_rank(dMember))
             if not memberId:
                 continue
 
