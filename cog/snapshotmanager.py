@@ -31,16 +31,16 @@ class SnapshotManager(commands.Cog):
         lower, upper = get_bw_range(date)
         return lower.strftime("%Y.%m.%d-") + upper.strftime("%Y.%m.%d")
     
-    def save_snapshot(self, offset=True):
+    async def save_snapshot(self, offset=True):
         snapId = self.make_snapshot_id(now().date() - timedelta(days=offset))
         Logger.bot.info(f"Saving snapshot with id {snapId}")
-        snapshot = self.make_snapshot()
+        snapshot = await self.make_snapshot()
         self._snapCache[snapId] = snapshot
         PickleUtil.save(self.make_snapshot_path(snapId), snapshot)
         return snapId
     
-    def make_snapshot(self):
-        return {id_: obj.__snap__() for id_, obj in self._objects.items()}
+    async def make_snapshot(self):
+        return {id_: await obj.__snap__() for id_, obj in self._objects.items()}
     
     async def parse_index(self, ctx, index: str):
         if index.isnumeric():
@@ -92,10 +92,10 @@ class SnapshotManager(commands.Cog):
             result = result[path]
         return result
     
-    def make_lb_snapshot(self, lb, **decoArgs):
-        pagesBw = lb.create_pages(False, False, **decoArgs)
-        pagesAcc = lb.create_pages(True, False, **decoArgs)
-        pagesTotal = lb.create_pages(False, True, **decoArgs)
+    async def make_lb_snapshot(self, lb, **decoArgs):
+        pagesBw = await lb.create_pages(False, False, **decoArgs)
+        pagesAcc = await lb.create_pages(True, False, **decoArgs)
+        pagesTotal = await lb.create_pages(False, True, **decoArgs)
         return [[pagesBw, pagesTotal], [pagesAcc, pagesAcc]]
     
     @parser("snap", isGroup=True)
@@ -108,7 +108,7 @@ class SnapshotManager(commands.Cog):
     async def force_make_snapshot(self, ctx: commands.Context):
         if not await Discord.user_check(ctx, *Config.user_dev):
             return
-        snapId = self.save_snapshot(offset=False)
+        snapId = await self.save_snapshot(offset=False)
         await ctx.send(embed=make_alert(f"Snapshot saved with the id {snapId}",
             color=COLOR_SUCCESS))
     

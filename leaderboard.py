@@ -4,6 +4,7 @@ from datetime import timedelta
 from logger import LoggerPair, Logger
 from msgmaker import make_entry_pages, make_stat_entries, decorate_text
 from util.timeutil import now, get_bw_range
+from state.guildmember import GuildMember
 from cog.datamanager import DataManager
 
 
@@ -12,7 +13,6 @@ from cog.datamanager import DataManager
 class LeaderBoard:
 
     _instances = {}
-    _memberManager = None
 
     def __init__(self, name, logger):
         self.name = name
@@ -28,10 +28,6 @@ class LeaderBoard:
         self._bwLb = []
 
         LeaderBoard._instances[name] = self
-    
-    @classmethod
-    def set_member_manager(cls, memberManager):
-        cls._memberManager = memberManager
     
     @classmethod
     def get_lb(cls, name: str):
@@ -92,7 +88,7 @@ class LeaderBoard:
 
     @classmethod
     def _get_ign(cls, id_: int):
-        return cls._memberManager.members[id_].ign
+        return GuildMember.members[id_].ign
     
     def set_stat(self, id_: int, val: int):
         prev = self.get_stat(id_)
@@ -105,6 +101,9 @@ class LeaderBoard:
                 self._stats[id_] = val
             self._update_lb(id_)
             return
+        
+        if diff < 0:
+            diff = val
 
         if diff > 0:
             self._acc[id_] = self.get_acc(id_) + diff
@@ -214,7 +213,7 @@ class LeaderBoard:
         for id_ in self._stats:
             self._rank(id_, lb, key)
     
-    def create_pages(self, acc: bool, total: bool, **decoArgs) -> List[str]:
+    async def create_pages(self, acc: bool, total: bool, **decoArgs) -> List[str]:
         if acc:
             lb = self._accLb
             ss = self.get_acc
@@ -228,35 +227,10 @@ class LeaderBoard:
             ss = self.get_bw
             header = "Bi-Weekly "
         
-        igns = LeaderBoard._memberManager.get_igns_set()
-        members = LeaderBoard._memberManager.members
+        valGetter = lambda m: ss(m.id)
+        filter_ = lambda m: m.status != GuildMember.REMOVED
         if "title" in decoArgs:
             decoArgs["title"] = header + decoArgs["title"]
         
-        return make_entry_pages(make_stat_entries(lb, igns, members, lambda m: ss(m.id)),
-            **decoArgs)
-    
-    def create_bw_report(self):
-        maxIgnLen = max(map(len, LeaderBoard._memberManager.ignIdMap.keys())) + 1
-        template = f"%-{maxIgnLen}s {{0:,}}"
-
-        total = 0
-        sections = {"Cosmonaut": [], "Rocketeer": [], "Space Pilot": [], 
-                    "Engineer": [], "Cadet": [], "MoonWalker": []}
-        
-        for id_ in self._bwLb:
-            gMember = LeaderBoard._memberManager.members[id_]
-            val = self.get_bw(id_)
-            s = (template % (gMember.ign + ":")).format(val)
-            sections[gMember.rank].append(s)
-            total += val
-
-        lower, upper = get_bw_range(now().date() - timedelta(days=1))
-        
-        text = "Bi-Week of " + lower.strftime("%Y/%m/%d - ") + upper.strftime("%Y.%m.%d\n")
-        text += f"total: {total:,}"
-
-        for rank, entries in sections.items():
-            text += f"\n\n[{rank}]\n\n" + "\n".join(entries)
-        
-        return decorate_text(text)
+        return make_entry_pages(await make_stat_entries(
+            valGetter, filter_=filter_, lb=lb), **decoArgs)

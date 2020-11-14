@@ -55,10 +55,7 @@ class DateClock(commands.Cog):
 
     async def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
-        self._snapshotManager.save_snapshot()
-        await Discord.send(Config.channel_bwReport, )
-        for seg in Discord.split_text(LeaderBoard.get_lb("xp").create_bw_report()):
-            await Discord.send(Config.channel_bwReport, seg)
+        await self._snapshotManager.save_snapshot()
         LeaderBoard.reset_all_bw()
         self._actTracker.biweekly_reset()
 

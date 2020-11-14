@@ -60,11 +60,7 @@ class DataManager(commands.Cog):
             Logger.bot.debug(f"data not found")
         
         if hasattr(obj, "__loaded__"):
-            cb = getattr(obj, "__loaded__")
-            if iscoroutinefunction(cb):
-                await cb()
-            else:
-                cb()
+            await getattr(obj, "__loaded__")()
         
         DataManager._classes[targetCls][1].add(obj)
         return obj

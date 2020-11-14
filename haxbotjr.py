@@ -13,6 +13,7 @@ from reactablemessage import ReactableMessage
 from util.discordutil import Discord
 from state.state import State
 from state.config import Config
+from state.guildmember import GuildMember
 from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
@@ -32,7 +33,7 @@ from cog.discordtools import DiscordTools
 
 class HaxBotJr(commands.Bot):
 
-    session = ClientSession()
+    session = None
 
     async def on_ready(self):
         await self.change_presence(activity=Activity(type=ActivityType.watching, name="you"))
@@ -42,7 +43,10 @@ class HaxBotJr(commands.Bot):
 
         Discord.init(self)
 
+        HaxBotJr.session = ClientSession()
+
         await State.load(Config)
+        await State.load(GuildMember)
     
         await DataManager.load(LeaderBoard("xp", Logger.xp))
         await DataManager.load(LeaderBoard("emerald", Logger.em))
@@ -51,7 +55,7 @@ class HaxBotJr(commands.Bot):
         self.add_cog(Configuration(self))
         self.add_cog(WynnAPI(self, HaxBotJr.session))
         self.add_cog(SnapshotManager(self))
-        self.add_cog(await DataManager.load(MemberManager(self)))
+        self.add_cog(MemberManager(self))
         self.add_cog(XPTracker(self))
         self.add_cog(await DataManager.load(WarTracker(self)))
         self.add_cog(await DataManager.load(EmeraldTracker(self)))
@@ -64,6 +68,8 @@ class HaxBotJr(commands.Bot):
         self.add_cog(Misc(self))
         self.add_cog(await DataManager.load(Votation(self)))
         self.add_cog(DiscordTools(self))
+
+        print("ready")
 
     @classmethod
     def exit(cls):
@@ -80,7 +86,6 @@ class HaxBotJr(commands.Bot):
             return
         await ctx.send(embed=make_alert("oh oopsie owo", 
             subtext="Pwease contact Pucaet abouwt thiws uwu"))
-        print(Fore.RED + Style.BRIGHT)
         await super().on_command_error(ctx, e)
     
     async def on_reaction_add(self, reaction, user):

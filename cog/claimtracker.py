@@ -39,7 +39,7 @@ class ClaimTracker(commands.Cog):
 
         self.bot = bot
     
-    def __loaded__(self):
+    async def __loaded__(self):
         self._claimNameOrder = list(self._claims.keys())
         self._order_claim_names()
 

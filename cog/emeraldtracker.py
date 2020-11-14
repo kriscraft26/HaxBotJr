@@ -8,8 +8,8 @@ from reactablemessage import ReactableMessage, PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from util.discordutil import Discord
+from state.guildmember import GuildMember
 from cog.datamanager import DataManager
-from cog.membermanager import MemberManager
 from cog.snapshotmanager import SnapshotManager
 
 
@@ -21,16 +21,15 @@ class EmeraldTracker(commands.Cog):
         self.parseAlert: ReactableMessage = None
         self.lastUpdateTimeStr = "owo"
 
-        self._memberManager: MemberManager= bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("emerald")
 
         self._snapshotManager.add("EmeraldTracker", self)
     
-    def __snap__(self):
+    async def __snap__(self):
         title = "Emerald Contribution Leader Board"
-        return self._snapshotManager.make_lb_snapshot(self._lb, 
+        return await self._snapshotManager.make_lb_snapshot(self._lb, 
             title=title, lastUpdate=self.lastUpdateTimeStr)
     
     @commands.Cog.listener()
@@ -65,10 +64,9 @@ class EmeraldTracker(commands.Cog):
             try:
                 sections = line.split(" - ")
                 ign = sections[0].split(" ")[-1]
-                if ign in self._memberManager.ignIdMap:
-                    id_ = self._memberManager.ignIdMap[ign]
+                if GuildMember.is_ign_active(ign):
                     em = int(sections[2][:-1])
-                    self._lb.set_stat(id_, em)
+                    self._lb.set_stat(GuildMember.ignIdMap[ign], em)
             except Exception:
                 failedLineNum += 1
         return failedLineNum
@@ -83,7 +81,7 @@ class EmeraldTracker(commands.Cog):
             pages = snapshot[acc][total]
         else:
             title = "Emerald Contribution Leader Board"
-            pages = self._lb.create_pages(acc, total,
+            pages = await self._lb.create_pages(acc, total,
                 title=title, lastUpdate=self.lastUpdateTimeStr)
 
         await PagedMessage(pages, ctx.channel).init()

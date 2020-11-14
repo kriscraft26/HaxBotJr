@@ -4,6 +4,7 @@ from math import ceil
 from discord import Embed
 
 from wynnapi import WynnData
+from state.guildmember import GuildMember
 
 
 COLOR_ERROR = 0xfe5e41
@@ -58,13 +59,29 @@ def make_entry_pages(entries, maxEntries=MAX_ENTRY_PER_PAGE, **decoArgs):
     return list(map(lambda _: decorate_text(pageFmt(_), **decoArgs), enumerate(pages)))
 
 
-def make_stat_entries(lb, igns, members, statSelector, strStat=False):
-    maxIgnLen = max(map(len, igns), default=0)
-    entryFmt = "[{0:<%d}]  {1:%d}  |  {2:>%s}" % (
-        len(str(len(lb))), maxIgnLen, "" if strStat else ",")
+async def make_stat_entries(valGetter, nameGetter=None, group=True, filter_=None, rank=True,
+                            lb=None):
+    nameGetter = nameGetter or (lambda m: m.ign)
+    data = []
+    maxNameLen = -1
+
+    if lb:
+        members = map(GuildMember.members.get, lb)
+        for member in filter(filter_, members) if filter_ else members:
+            name = nameGetter(member)
+            maxNameLen = max(maxNameLen, len(name))
+            data.append((name, valGetter(member)))
+    else:
+        async for member in GuildMember.iterate(filter_):
+            val = valGetter(member)
+            name = nameGetter(member)
+            maxNameLen = max(maxNameLen, len(name))
+            data.append((name, val))
+
+    entryFmt = "%s{:<%d}  |  {:%s}" % (
+        "[{:<%d}]  " % len(str(len(data))) if rank else "", maxNameLen, "," if group else "")
 
     entries = []
-    for i, id_ in enumerate(lb):
-        gMember = members[id_]
-        entries.append(entryFmt.format(i + 1, gMember.ign, statSelector(gMember)))
+    for i, (name, val) in enumerate(data):
+        entries.append(entryFmt.format(*((i + 1, name, val) if rank else (name, val))))
     return entries

@@ -4,8 +4,6 @@ from discord import TextChannel, Guild, Role, Member
 from discord.utils import find
 from discord.ext.commands import Bot, Context
 
-from msgmaker import make_alert
-
 
 class Discord:
 
@@ -101,32 +99,32 @@ class Discord:
     async def user_check(cls, ctx: Context, *userIds):
         passed = ctx.author.id in userIds
         if not passed:
-            text = "You have no permission to use this command!"
-            await ctx.send(embed=make_alert(text))
+            text = "`You have no permission to use this command!`"
+            await ctx.send(text)
         return passed
 
     @classmethod
     async def channel_check(cls, ctx: Context, channelId):
         passed = ctx.channel.id == channelId
         if not passed:
-            text = "This command can't be used in this channel!"
-            await ctx.send(embed=make_alert(text))
+            text = "`This command can't be used in this channel!`"
+            await ctx.send(text)
         return passed
     
     @classmethod
     async def role_check(cls, ctx: Context, roleId):
         passed = cls.have_role(ctx.author, roleId)
         if not passed:
-            text = "You don't have the role needed to use this command!"
-            await ctx.send(embed=make_alert(text))
+            text = "`You don't have the role needed to use this command!`"
+            await ctx.send(text)
         return passed
     
     @classmethod
     async def rank_check(cls, ctx: Context, minRank):
         passed = cls.have_min_rank(ctx.author, minRank)
         if not passed:
-            text = "Your rank have no permission to use this command!"
-            await ctx.send(embed=make_alert(text))
+            text = "`Your rank have no permission to use this command!`"
+            await ctx.send(text)
         return passed
     
     class Channels:

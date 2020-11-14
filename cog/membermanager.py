@@ -13,47 +13,39 @@ from leaderboard import LeaderBoard
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
-from cog.datamanager import DataManager
+from state.guildmember import GuildMember
 from cog.snapshotmanager import SnapshotManager
 
 
-class GuildMember:
+# class GuildMember:
 
-    def __init__(self, dMember: Member, rank: str, vRank: str, ign: str, mcId: str):
-        Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
-        self.id: int = dMember.id
-        self.mcId = mcId
-        self.discord = str(dMember)
+#     def __init__(self, dMember: Member, rank: str, vRank: str, ign: str, mcId: str):
+#         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
+#         self.id: int = dMember.id
+#         self.mcId = mcId
+#         self.discord = str(dMember)
 
-        self.rank = rank
-        self.vRank = vRank
-        self.ign = ign
+#         self.rank = rank
+#         self.vRank = vRank
+#         self.ign = ign
 
-    def __repr__(self):
-        s = "<GuildMember"
-        properties = ["ign", "discord", "rank", "vRank", "mcId"]
-        for p in properties:
-            if hasattr(self, p):
-                s += f" {p}={getattr(self, p)}"
-        return s + ">"
+#     def __repr__(self):
+#         s = "<GuildMember"
+#         properties = ["ign", "discord", "rank", "vRank", "mcId"]
+#         for p in properties:
+#             if hasattr(self, p):
+#                 s += f" {p}={getattr(self, p)}"
+#         return s + ">"
 
 
 IG_MEMBERS_UPDATE_INTERVAL = 3
 
+IG_RANKS = ["Recruit", "Recruiter", "Captain", "Chief", "Owner"]
 
-@DataManager.register("members", "ignIdMap", "idleMembers", "_removedMembers")
+
 class MemberManager(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        LeaderBoard.set_member_manager(self)
-
-        self.members: Dict[int, GuildMember] = {}
-        self.ignIdMap: Dict[str, int] = {}
-
-        self.idleMembers: Set[int] = set()
-
-        self._removedMembers = {}
-
         self.hasInitMembersUpdate = False
 
         self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
@@ -63,23 +55,14 @@ class MemberManager(commands.Cog):
         self._snapshotManager.add("MemberManager", self)
 
         self.bot = bot
-
-    def __loaded__(self):
         self._ig_members_update.start()
-        LeaderBoard.init_lb(self.members.keys())
 
-        if self.members:
-            sample = list(self.members.values())[0]
-            if not hasattr(sample, "mcId"):
-                for m in self.members.values():
-                    m.mcId = None
-    
-    def __snap__(self):
+    async def __snap__(self):
         return {
-            "stats": {m.ign: self.make_stats_msg(m) for m in self.members.values()},
-            "members": self.make_members_pages(False),
-            "members.idle": self.make_members_pages(True),
-            "members.missing": self.make_members_missing_msg()
+            "stats": {m.ign: self.make_stats_msg(m) async for m in GuildMember.iterate()},
+            "members": await self.make_members_pages(False),
+            "members.idle": await self.make_members_pages(True),
+            "members.missing": await self.make_members_missing_msg()
         }
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
@@ -88,38 +71,37 @@ class MemberManager(commands.Cog):
         if not guildStats:
             return
         
-        prevIgMembers = self._igMembers
-        self._igMembers = {m["name"] for m in guildStats["members"]}
-
         if not self.hasInitMembersUpdate:
+            self._igMembers = {m["name"] for m in guildStats["members"]}
             await self._bulk_update_members()
             self.hasInitMembersUpdate = True
-        else:
-            trackedIgns = self.get_igns_set()
 
-            joined = self._igMembers.difference(prevIgMembers)
-            joinTracked = joined.intersection(trackedIgns)
-            joinedIds = {self.ignIdMap[ign] for ign in joinTracked}
-            self.idleMembers = self.idleMembers.difference(joinedIds)
-            if joined:
-                Logger.bot.info(f"{joinTracked} status set to active")
-                for ign in joined:
+        else:
+            prevIgMembers = self._igMembers
+            currIgMembers = set()
+
+            for memberData in guildStats["members"]:
+                ign = memberData["name"]
+                currIgMembers.add(ign)
+
+                if ign not in prevIgMembers:
                     text = ign + " has joined the guild"
                     await Discord.send(Config.channel_memberLog, text)
-                for id_ in joinedIds:
-                    await Event.broadcast("memberTrack", id_)
+
+                member: GuildMember = GuildMember.get_member_named(ign)
+                if member and member.status == GuildMember.IDLE:
+                    await GuildMember.set_status(member.id, GuildMember.ACTIVE)
+                
+            missingIgns = prevIgMembers.difference(currIgMembers)
+            self._igMembers = currIgMembers
             
-            removed = prevIgMembers.difference(self._igMembers)
-            removeTracked = removed.intersection(trackedIgns)
-            removedIds = {self.ignIdMap[ign] for ign in removeTracked}
-            self.idleMembers = self.idleMembers.union(removedIds)
-            if removed:
-                Logger.bot.info(f"{removeTracked} status set to idle")
-                for ign in removed:
-                    text = ign + " has left the guild"
-                    await Discord.send(Config.channel_memberLog, text)
-                for id_ in removedIds:
-                    await Event.broadcast("memberUnTrack", id_)
+            for ign in missingIgns:
+
+                text = ign + " has left the guild"
+                await Discord.send(Config.channel_memberLog, text)
+
+                if GuildMember.is_ign_active(ign):
+                    await GuildMember.set_status(member.id, GuildMember.IDLE)
     
     @_ig_members_update.before_loop
     async def _before_ig_members_update(self):
@@ -128,176 +110,90 @@ class MemberManager(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
-        isGMemberBefore = before.id in self.members
+        isGMemberBefore = before.id in GuildMember.discordIdMap
         isGMemberAfter = Discord.get_rank(after)
 
         if isGMemberBefore and not isGMemberAfter:
-            await self._remove_member(self.members[after.id])
+            await GuildMember.remove(GuildMember.discordIdMap[before.id])
         elif not isGMemberBefore and isGMemberAfter:
-            await self._update_guild_info(await self._add_member(after), after)
+            await GuildMember.add(after, isGMemberAfter)
         elif isGMemberBefore and isGMemberAfter:
-            await self._update_guild_info(self.members[before.id], after)
+            ignBefore = before.nick.split(" ")[-1]
+            ignAfter = after.nick.split(" ")[-1]
+            id_ = GuildMember.ignIdMap[ignBefore]
+            if ignBefore != ignAfter:
+                if not await GuildMember.ign_check(id_):
+                    await GuildMember.remove(id_)
+                    await GuildMember.add(after, isGMemberAfter)
+            else:
+                await GuildMember.update(id_, after)
     
     @commands.Cog.listener()
     async def on_member_remove(self, dMember: Member):
-        if dMember.id in self.members:
-            await self._remove_member(self.members[dMember.id])
-
-    @commands.Cog.listener()
-    async def on_user_update(self, before: User, after: User):
-        if before.id in self.members:
-            member = self.members[before.id]
-            Logger.bot.info(f"{member.ign} discord change {member.discord} -> {after}")
-            member.discord = str(after)
-    
-    async def _mark_idle(self, id_, broadcast=True):
-        self.idleMembers.add(id_)
-        if broadcast:
-            await Event.broadcast("memberUnTrack", id_)
-        Logger.bot.info(f"{self.members[id_].ign} status set to idle")
-    
-    async def _un_mark_idle(self, id_):
-        self.idleMembers.remove(id_)
-        await Event.broadcast("memberTrack", id_)
-        Logger.bot.info(f"{self.members[id_].ign} status set to active")
-
-    async def _update_guild_info(self, gMember: GuildMember, dMember: Member):
-        currRank, vRank = Discord.get_rank(dMember)
-        change = [gMember.rank, currRank]
-        if gMember.rank != currRank:
-            Logger.guild.info(f"{gMember.ign} rank change {gMember.rank} -> {currRank}")
-            gMember.rank = currRank
-            if change != ["Rocketeer", "Pilot"] and change != ["Engineer", "Rocketeer"]:
-                await Event.broadcast("memberRankChange", gMember.id, gMember.rank, currRank)
-                LeaderBoard.reset_all_acc(gMember.id)
-        if gMember.vRank != vRank:
-            Logger.guild.info(f"{gMember.ign} vRank change {gMember.vRank} -> {vRank}")
-            gMember.vRank = vRank
-        
-        currIgn = dMember.nick.split(" ")[-1]
-        if gMember.ign != currIgn:
-            Logger.guild.info(f"{gMember.ign} changed ign to {currIgn}")
-            if currIgn in self._igMembers and gMember.id in self.idleMembers:
-                await self._un_mark_idle(gMember.id)
-            elif currIgn not in self._igMembers and gMember.id not in self.idleMembers:
-                await self._mark_idle(gMember.id)
-            del self.ignIdMap[gMember.ign]
-            gMember.ign = currIgn
-            self.ignIdMap[currIgn] = gMember.id
-        
-        gMember.discord = f"{dMember.name}#{dMember.discriminator}"
+        if dMember.id in GuildMember.discordIdMap:
+            await GuildMember.remove(GuildMember.discordIdMap[dMember.id])
 
     async def _bulk_update_members(self):
-        currGuildDMembers = filter(Discord.get_rank, Discord.guild.members)
-        currGuildDMembers = {m.id: m for m in currGuildDMembers}
+        currDiscordIds = set(map(lambda m: m.id, 
+            filter(Discord.get_rank, Discord.guild.members)))
+        prevDiscordIds = set(GuildMember.discordIdMap.keys())
 
-        currGuildMemberIds = set(currGuildDMembers.keys())
-        prevGuildMemberIds = set(self.members.keys())
-
-        joined = currGuildMemberIds.difference(prevGuildMemberIds)
+        joined = currDiscordIds.difference(prevDiscordIds)
         for id_ in joined:
-            dMember = currGuildDMembers[id_]
-            await self._add_member(dMember)
+            dMember = Discord.guild.get_member(id_)
+            memberId = await GuildMember.add(dMember, Discord.get_rank)
+            if not memberId:
+                continue
 
-            ign = dMember.nick.split(" ")[-1]
-            if ign not in self._igMembers:
-                await self._mark_idle(id_)
+            if GuildMember.members[memberId].ign not in self._igMembers:
+                await GuildMember.set_status(memberId, GuildMember.IDLE)
         
-        removed = prevGuildMemberIds.difference(currGuildMemberIds)
+        removed = prevDiscordIds.difference(currDiscordIds)
         for id_ in removed:
-            await self._remove_member(self.members[id_])
+            await GuildMember.remove(GuildMember.discordIdMap[id_])
         
-        changed = prevGuildMemberIds.intersection(currGuildMemberIds)
+        changed = prevDiscordIds.intersection(currDiscordIds)
         for id_ in changed:
-            gMember = self.members[id_]
-            dMember = currGuildDMembers[id_]
-            await self._update_guild_info(gMember, dMember)
-
+            gMember = GuildMember.members[GuildMember.discordIdMap[id_]]
+            dMember = Discord.guild.get_member(id_)
             ign = dMember.nick.split(" ")[-1]
-            if ign in self._igMembers and id_ in self.idleMembers:
-                await self._un_mark_idle(id_)
-            elif ign not in self._igMembers and id_ not in self.idleMembers:
-                await self._mark_idle(id_)
-    
-    async def _add_member(self, dMember: Member):
-        id_ = dMember.id
-        if id_ in self._removedMembers:
-            gMember, statsInfo = self._removedMembers[id_]
-            Logger.bot.info(f"undo removal of {gMember}")
 
-            del self._removedMembers[id_]
+            if gMember.ign != ign:
+                if not await GuildMember.ign_check(id_):
+                    await GuildMember.remove(id_)
+                    await GuildMember.add(dMember, Discord.get_rank(dMember))
+            else:
+                await GuildMember.update(gMember.id, dMember)
 
-            LeaderBoard.force_add_entry(id_, statsInfo)
-        else:
-            ranks = Discord.get_rank(dMember)
-            ign = dMember.nick.split(" ")[-1]
-            mcId = await WynnAPI.get_player_id(ign)
-            if not mcId:
-                Logger.bot.warning(f"unable to find mc uuid of {ign}")
-            gMember = GuildMember(dMember, *ranks, ign, mcId)
-        
-        self.ignIdMap[gMember.ign] = id_
-        self.members[id_] = gMember
-
-        if gMember.ign in self._igMembers:
-            await Event.broadcast("memberTrack", id_)
-        else:
-            await self._mark_idle(id_, broadcast=False)
-        
-        return gMember
-    
-    async def _remove_member(self, gMember: GuildMember):
-        Logger.bot.info(f"removed guild member {gMember}")
-        id_ = gMember.id
-
-        del self.members[id_]
-        del self.ignIdMap[gMember.ign]
-        if id_ in self.idleMembers:
-            self.idleMembers.remove(id_)
-        else:
-            await Event.broadcast("memberUnTrack", id_)
-
-        self._removedMembers[id_] = (gMember, LeaderBoard.get_entry(id_))
-        LeaderBoard.remove_entry(id_)
-
-    def get_igns_set(self) -> Set[str]:
-        return set(self.ignIdMap.keys())
-    
-    def get_tracked_igns(self) -> Set[str]:
-        idle_igns = {self.members[id_].ign for id_ in self.idleMembers}
-        return self.get_igns_set().difference(idle_igns)
-    
-    def get_member_by_ign(self, ign: str) -> GuildMember:
-        return self.members[self.ignIdMap[ign]]
+            if ign in self._igMembers:
+                await GuildMember.set_status(gMember.id, GuildMember.ACTIVE)
+            else:
+                await GuildMember.set_status(gMember.id, GuildMember.IDLE)
     
     def make_stats_msg(self, member: GuildMember):
         statInfo = LeaderBoard.get_entry(member.id)
+        xp = statInfo["xpBw"]
+        em = statInfo["emeraldBw"]
+        wc = statInfo["warCountBw"]
+        statTemplate = f"%-{len(str(max(xp[0], em[0], wc[0])))}d #%d"
+        
+        if member.ownerId:
+            title = GuildMember.members[member.ownerId].ign + " " + member.ign
+            text = ""
+        elif member.discordId:
+            title = str(Discord.guild.get_member(member.discordId)) + " " + member.ign
+            text = f"rank     {member.rank}\n"
+            if member.vRank:
+                text += f"title    {member.vRank}\n"
+            text += "-------\n"
+        else:
+            title = member.ign
+            text = ""
 
-        statTypes = ["xp", "emerald", "warCount"]
-        statTypeTypes = [("Total", "Total"), ("Acc", "Accumulated"), ("Bw", "Bi-Weekly")]
-
-        maxRankLen = max(map(lambda e: len(str(e[1])), statInfo.values())) + 4
-        maxStatLen = -1
-        for t in statTypes:
-            maxStatLen = max([maxStatLen, len(str(statInfo[t][0])) - maxRankLen, 
-                              len(f"{statInfo[t + 'Total'][0]:,}")])
-
-        headDisplay = "{0:->%d}\n" % (maxStatLen + maxRankLen)
-        statDisplay = "{0:%d,} (#{1})\n" % maxStatLen
-        idleStatus = "-- NOT IN GUILD" if member.id in self.idleMembers else ""
-
-        sections = []
-        for t in statTypes:
-            s = ""
-            s += f"{t:-<14}{headDisplay}".format(statInfo[t][0])
-            for tt, tts in statTypeTypes:
-                s += f"{tts + ':':14}{statDisplay}".format(*statInfo[t + tt])
-            sections.append(s)
-        sections.append(f"discord {member.discord} {idleStatus}")
-        text = "\n".join(sections)
-
-        vRank = f"<{member.vRank}> " if member.vRank else ""
-        title = f"[{member.rank}] {vRank}{member.ign}"
+        text += f"xp       {statTemplate % xp}\n"
+        text += f"emerald  {statTemplate % em}\n"
+        text += f"war      {statTemplate % wc}\n-------\n"
+        text += f"status   {member.status}"
 
         return decorate_text(text, title=title)
 
@@ -309,26 +205,25 @@ class MemberManager(commands.Cog):
             if not statsSnap:
                 return
             if ign not in statsSnap:
-                await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
+                await ctx.send(embed=make_alert(f"{ign} is/was not in the guild."))
                 return
             text = statsSnap[ign]
         else:
-            if ign not in self.ignIdMap:
-                await ctx.send(embed=make_alert(f"{ign} is not in the guild."))
+            if ign not in GuildMember.ignIdMap:
+                await ctx.send(embed=make_alert(f"{ign} is/was not in the guild."))
                 return
-            text = self.make_stats_msg(self.get_member_by_ign(ign))
+            text = self.make_stats_msg(GuildMember.get_member_named(ign))
         
         await ctx.send(text)
     
-    def make_members_pages(self, idle):
-        lb = self.idleMembers if idle else self.members.keys()
-        igns = self.ignIdMap.keys()
-        members = self.members
+    async def make_members_pages(self, idle):
         title = ("Idle " if idle else "") + "Guild Members"
-        statSelector = lambda m: m.discord
+        valGetter = lambda m: Discord.guild.get_member(
+            GuildMember.members[m.ownerId].discordId if m.ownerId else m.discordId)
+        filter_ = lambda m: m.status == (GuildMember.IDLE if idle else GuildMember.ACTIVE)
         
-        return make_entry_pages(make_stat_entries(
-            lb, igns, members, statSelector, strStat=True), title=title)
+        return make_entry_pages(await make_stat_entries(
+            valGetter, group=False, filter_=filter_), title=title)
 
     @parser("members", ["idle"], "-snap", isGroup=True)
     async def display_members(self, ctx: commands.Context, idle, snap):
@@ -338,13 +233,16 @@ class MemberManager(commands.Cog):
             if not pages:
                 return
         else:
-            pages = self.make_members_pages(idle)
+            pages = await self.make_members_pages(idle)
         await PagedMessage(pages, ctx.channel).init()
     
-    def make_members_missing_msg(self):
-        trackedIgns = self.get_igns_set()
-        missingIgns = self._igMembers.difference(trackedIgns)
-        return ", ".join(missingIgns)
+    async def make_members_missing_msg(self):
+        igns = self._igMembers.copy()
+        filter_ = lambda m: m.status == GuildMember.ACTIVE
+        mapper = lambda m: igns.remove(m.ign)
+        async for _ in GuildMember.iterate(filter_, mapper):
+            pass
+        return ", ".join(igns)
 
     @parser("members missing", "-snap", parent=display_members)
     async def display_missing_members(self, ctx: commands.Context, snap):
@@ -356,7 +254,7 @@ class MemberManager(commands.Cog):
             if not text:
                 return
         else:
-            text = self.make_members_missing_msg()
+            text = await self.make_members_missing_msg()
         await ctx.send(text)
 
     @parser("members fix", parent=display_members)

@@ -8,7 +8,7 @@ from reactablemessage import PagedMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
-from cog.membermanager import MemberManager
+from state.guildmember import GuildMember
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -24,7 +24,6 @@ class XPTracker(commands.Cog):
         self.bot = bot
 
         self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
-        self._memberManager: MemberManager = bot.get_cog("MemberManager")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
@@ -34,8 +33,8 @@ class XPTracker(commands.Cog):
         self._xp_log.start()
         self._snapshotManager.add("XPTracker", self)
     
-    def __snap__(self):
-        return self._snapshotManager.make_lb_snapshot(self._lb, 
+    async def __snap__(self):
+        return await self._snapshotManager.make_lb_snapshot(self._lb, 
             title="XP Leader Board", api=self._guildStatsTracker)
 
     @tasks.loop(seconds=XP_UPDATE_INTERVAL)
@@ -44,11 +43,10 @@ class XPTracker(commands.Cog):
         if not guildStats:
             return
 
-        trackedIgns = self._memberManager.get_tracked_igns()
 
         for memberData in guildStats["members"]:
-            if memberData["name"] in trackedIgns:
-                id_ = self._memberManager.ignIdMap[ memberData["name"]]
+            if GuildMember.is_ign_active(memberData["name"]):
+                id_ = GuildMember.ignIdMap[ memberData["name"]]
                 self._lb.set_stat(id_,  memberData["contributed"])
     
     @_update.before_loop
@@ -58,7 +56,10 @@ class XPTracker(commands.Cog):
     
     @tasks.loop(minutes=XP_LOG_INTERVAL)
     async def _xp_log(self):
-        for id_ in self._memberManager.members:
+        filter_ = lambda m: m.status == GuildMember.ACTIVE
+        mapper = lambda m: m.id
+
+        async for id_ in GuildMember.iterate(filter_, mapper):
             stat = self._lb.get_stat(id_)
             prev = self._lastLoggedVal.get(id_, -1)
             if prev == -1:
@@ -69,7 +70,7 @@ class XPTracker(commands.Cog):
             if not dxp:
                 continue
             text = "  |  ".join([
-                f"**{self._memberManager.members[id_].ign}** (+{dxp:,})",
+                f"**{GuildMember.members[id_].ign}** (+{dxp:,})",
                 f"__Total__ -> {self._lb.get_total(id_):,}",
                 f"__Acc__ -> {self._lb.get_acc(id_):,}",
                 f"__BW__ -> {self._lb.get_bw(id_):,}"])
@@ -90,7 +91,7 @@ class XPTracker(commands.Cog):
                 return
             pages = snapshot[acc][total]
         else:
-            pages = self._lb.create_pages(acc, total,
+            pages = await self._lb.create_pages(acc, total,
                 title="XP Leader Board", api=self._guildStatsTracker)
         
         await PagedMessage(pages, ctx.channel).init()
@@ -99,5 +100,3 @@ class XPTracker(commands.Cog):
     async def fix_xp(self, ctx: commands.Context):
         if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
-        id_ = self._memberManager.ignIdMap["IceWarox"]
-        self._lb._total[id_] = self._lb._stats[id_]
