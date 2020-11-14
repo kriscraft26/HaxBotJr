@@ -8,6 +8,7 @@ from reactablemessage import ReactableMessage, PagedMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from util.discordutil import Discord
+from state.config import Config
 from state.guildmember import GuildMember
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
@@ -118,7 +119,7 @@ class EmeraldTracker(commands.Cog):
     
     @parser("em fix", parent=display_emerald)
     async def fix_em(self, ctx: commands.Context):
-        if not await Discord.rank_check(ctx, "Cosmonaut"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
         
         id_ = GuildMember.ignIdMap["Carrota"]

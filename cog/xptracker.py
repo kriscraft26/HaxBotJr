@@ -98,5 +98,5 @@ class XPTracker(commands.Cog):
     
     @parser("xp fix", parent=display_xp_lb)
     async def fix_xp(self, ctx: commands.Context):
-        if not await Discord.rank_check(ctx, "Cosmonaut"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return
