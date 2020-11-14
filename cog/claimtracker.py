@@ -274,7 +274,7 @@ class ClaimTracker(commands.Cog):
     
     @parser("claim alert toggle", parent=get_alert_status)
     async def toggle_alert(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         if self._alertStatus >= 0:
             await self.dismiss_alert(disable=True)
