@@ -131,8 +131,8 @@ class GuildMember:
             member.discordId = discordId
             if prevDiscordId is not None:
                 del cls.discordIdMap[prevDiscordId]
-                if discordId is not None:
-                    cls.discordIdMap[discordId] = member.id
+            if discordId is not None:
+                cls.discordIdMap[discordId] = member.id
 
             await Event.broadcast("memberDiscordChange", id_, prevDiscordId)
         
