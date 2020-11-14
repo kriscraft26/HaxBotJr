@@ -115,3 +115,18 @@ class EmeraldTracker(commands.Cog):
         alert = make_alert("Action canceled", color=COLOR_SUCCESS)
         await msg.edit_message(embed=alert)
         await msg.un_track()
+    
+    @parser("em fix", parent=display_emerald)
+    async def fix_em(self, ctx: commands.Context):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
+            return
+        
+        id_ = GuildMember.ignIdMap["Carrota"]
+        self._lb._total[id_] = self._lb.get_total(id_) + 12608
+        self._lb._rank(id_, self._lb._totalLb, self._lb.get_total)
+
+        self._lb._acc[id_] = self._lb.get_acc(id_) + 12608
+        self._lb._rank(id_, self._lb._accLb, self._lb.get_acc)
+
+        self._lb._bw[id_] = self._lb.get_bw(id_) + 12608
+        self._lb._rank(id_, self._lb._bwLb, self._lb.get_bw)
