@@ -159,8 +159,8 @@ class MemberManager(commands.Cog):
             ign = dMember.nick.split(" ")[-1]
 
             if gMember.ign != ign:
-                if not await GuildMember.ign_check(id_):
-                    await GuildMember.remove(id_)
+                if not await GuildMember.ign_check(gMember.id):
+                    await GuildMember.remove(gMember.id)
                     await GuildMember.add(dMember, Discord.get_rank(dMember))
             else:
                 await GuildMember.update(gMember.id, dMember)
