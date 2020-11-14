@@ -104,4 +104,4 @@ class WynnAPI:
                 Logger.bot.warning(
                     f"failed request player ign of {mcId} with {resp.status}")
                 return None
-            return await resp.json()
+            return await resp.json()[0]["name"]
