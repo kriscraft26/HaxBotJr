@@ -94,6 +94,9 @@ class GuildMember:
     async def remove_alt(cls, id_):
         member = cls.members[id_]
         cls.altMap[member.ownerId].remove(id_)
+        if not cls.altMap[member.ownerId]:
+            del cls.altMap[member.ownerId]
+
         prevOwnerId = member.ownerId
         member.ownerId = None
 
