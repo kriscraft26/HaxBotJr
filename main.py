@@ -2,13 +2,13 @@ from dotenv import load_dotenv
 from os import getenv
 
 from discord import Intents, MemberCacheFlags
-import uvloop
+# import uvloop
 
 from haxbotjr import HaxBotJr
 
 
 load_dotenv()
-uvloop.install()
+# uvloop.install()
 
 
 intents: Intents = Intents.none()
