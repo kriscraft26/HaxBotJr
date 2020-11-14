@@ -264,3 +264,55 @@ class MemberManager(commands.Cog):
         for member in self.members.values():
             member.mcId = await WynnAPI.get_player_id(member.ign)
             await sleep(0.2)
+    
+    @parser("alt", isGroup=True)
+    async def display_alt(self, ctx):
+        if not GuildMember.altMap:
+            await ctx.send("`No alts are registered.`")
+            return
+        
+        embed = Embed()
+        getName = lambda id_: GuildMember.members[id_].ign
+        for ownerId, altIds in GuildMember.altMap.items():
+            altNames = ", ".join(map(getName, altIds))
+            embed.add_field(name=getName(ownerId), value=altNames, inline=False)
+        await ctx.send(embed=embed)
+    
+    @parser("alt add", "main", "alt", parent=display_alt)
+    async def add_alt(self, ctx, main, alt):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
+            return
+        owner = GuildMember.get_member_named(main)
+        if not owner:
+            await ctx.send(f"`{main} is not a guild member.`")
+            return
+        if not await GuildMember.add_alt(owner.id, alt):
+            if alt in GuildMember.ignIdMap:
+                await ctx.send(f"`{alt} is already an alt.`")
+            else:
+                await ctx.send(f"`the player {alt} doesn't exist.`")
+            return
+        await ctx.message.add_reaction("✅")
+    
+    @parser("alt remove", "alt", parent=display_alt)
+    async def remove_alt(self, ctx, alt):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
+            return
+        member = GuildMember.get_member_named(alt)
+        if not member:
+            await ctx.send(f"`{alt} is not a guild member.`")
+            return
+        if not member.ownerId:
+            await ctx.send(f"`{alt} is not an alt.`")
+            return
+        await GuildMember.remove_alt(member.id)
+        await ctx.message.add_reaction("✅")
+
+        isNonMember = lambda m: \
+            m.id not in GuildMember.discordIdMap and m.nick and m.nick.endswith(" " + alt)
+        for dMember in filter(isNonMember, Discord.guild.members):
+            ranks = Discord.get_rank(dMember)
+            if ranks:
+                await GuildMember.update(member.id, dMember)
+                return
+        await GuildMember.remove(member.id)
