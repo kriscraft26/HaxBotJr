@@ -4,7 +4,7 @@ from logger import Logger
 from wynnapi import WynnAPI
 from msgmaker import *
 from leaderboard import LeaderBoard
-from reactablemessage import PagedMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
@@ -94,9 +94,10 @@ class XPTracker(commands.Cog):
             pages = await self._lb.create_pages(acc, total,
                 title="XP Leader Board", api=self._guildStatsTracker)
         
-        await PagedMessage(pages, ctx.channel).init()
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
     
     @parser("xp fix", parent=display_xp_lb)
     async def fix_xp(self, ctx: commands.Context):
-        if not await Discord.rank_check(ctx, "Cosmonaut"):
+        if not await Discord.user_check(ctx, *Config.user_dev):
             return

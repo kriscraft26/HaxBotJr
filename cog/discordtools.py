@@ -1,8 +1,8 @@
-from discord import Member, Role
+from discord import Member, Role, Embed
 from discord.ext import commands
 
 from msgmaker import make_alert
-from reactablemessage import ConfirmMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 
@@ -55,11 +55,13 @@ class DiscordTools(commands.Cog):
             return
         
         text = f"Are you sure to kick {member.display_name}?"
-        successText = f"bye bye {member.display_name}."
-        await ConfirmMessage(ctx, text, successText, 
-            self._kick_member_cb, member, ctx.author).init()
+        rMsg = RMessage(await ctx.send(embed=Embed(title=text)),
+            userId=ctx.author.id)
+        await rMsg.add_reaction("❌", rMsg.delete)
+        await rMsg.add_reaction("✅", self._kick_member_cb, 
+            member, ctx.author, rMsg, ctx.message)
     
-    async def _kick_member_cb(self, member: Member, executor: Member):
+    async def _kick_member_cb(self, member: Member, executor: Member, rMsg, msg):
         reason = f"kicked by {executor.display_name}"
 
         removeRoles = []
@@ -69,6 +71,9 @@ class DiscordTools(commands.Cog):
         await member.remove_roles(*removeRoles, reason=reason)
 
         await member.edit(reason=reason, nick=None)
+
+        await rMsg.delete()
+        await msg.add_reaction("✅")
     
     @parser("invite", "member", "ign")
     async def invite_member(self, ctx: commands.Context, member, ign):
@@ -85,10 +90,12 @@ class DiscordTools(commands.Cog):
             return
         
         text = f"Are you sure to invite {member.display_name} / {ign}?"
-        await ConfirmMessage(ctx, text, None,
-            self._invite_member_cb, member, ign, ctx.author).init()
+        rMsg = RMessage(await ctx.send(embed=Embed(title=text)), userId=ctx.author.id)
+        await rMsg.add_reaction("❌", rMsg.delete)
+        await rMsg.add_reaction("✅", self._invite_member_cb, 
+            member, ign, ctx.author, rMsg, ctx.message)
     
-    async def _invite_member_cb(self, member: Member, ign, executor: Member):
+    async def _invite_member_cb(self, member: Member, ign, executor: Member, rMsg, msg):
         reason = f"invited by {executor.display_name}"
 
         nick = "Cadet " + ign
@@ -97,3 +104,6 @@ class DiscordTools(commands.Cog):
 
         text = f"<@!{member.id}> welcome to the guild! 🥳"
         await Discord.Channels.guild.send(text)
+
+        await rMsg.delete()
+        await msg.add_reaction("✅")

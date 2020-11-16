@@ -6,7 +6,7 @@ from logger import Logger
 from wynnapi import WynnAPI
 from msgmaker import *
 from leaderboard import LeaderBoard
-from reactablemessage import PagedMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
@@ -106,7 +106,8 @@ class WarTracker(commands.Cog):
             pages = await self._lb.create_pages(acc, total,
                 title="War Count Leader Board", api=self._serverListTracker)
 
-        await PagedMessage(pages, ctx.channel).init()
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
     
     @parser("wc fix", parent=display_war_count_lb)
     async def fix_wc(self, ctx: commands.Context):

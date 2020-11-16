@@ -8,7 +8,7 @@ from discord.utils import find
 
 from logger import Logger
 from msgmaker import make_alert, COLOR_INFO, decorate_text
-from reactablemessage import ConfirmMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from cog.datamanager import DataManager
@@ -132,13 +132,16 @@ class Votation(commands.Cog):
         await ctx.message.delete()
 
         text = f"Are you sure to end the vote `{title}`?"
-        vote = self.votes[title]
-        await ConfirmMessage(
-            ctx, text, None, self._end_vote_cb, vote, anonymous).init()
+        rMsg = RMessage(await ctx.send(embed=Embed(title=text)))
+        await rMsg.add_reaction("❌", rMsg.delete)
+        await rMsg.add_reaction("✅", self._end_vote_cb, 
+            self.votes[title], anonymous, rMsg)
 
-    async def _end_vote_cb(self, vote, anonymous):
+    async def _end_vote_cb(self, vote, anonymous, rMsg):
         await vote.end(anonymous)
         del self.votes[vote.title]
+
+        await rMsg.delete()
     
     async def _get_option_vote(self, ctx: commands.Context, title):
         if title not in self.votes:

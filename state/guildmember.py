@@ -94,6 +94,9 @@ class GuildMember:
     async def remove_alt(cls, id_):
         member = cls.members[id_]
         cls.altMap[member.ownerId].remove(id_)
+        if not cls.altMap[member.ownerId]:
+            del cls.altMap[member.ownerId]
+
         prevOwnerId = member.ownerId
         member.ownerId = None
 
@@ -128,8 +131,8 @@ class GuildMember:
             member.discordId = discordId
             if prevDiscordId is not None:
                 del cls.discordIdMap[prevDiscordId]
-                if discordId is not None:
-                    cls.discordIdMap[discordId] = member.id
+            if discordId is not None:
+                cls.discordIdMap[discordId] = member.id
 
             await Event.broadcast("memberDiscordChange", id_, prevDiscordId)
         

@@ -6,7 +6,6 @@ from discord.ext import commands, tasks
 from logger import Logger
 from wynnapi import WynnAPI
 from msgmaker import *
-from reactablemessage import PagedMessage
 from util.timeutil import now, add_tz_info
 from util.cmdutil import parser
 from util.discordutil import Discord
@@ -274,7 +273,7 @@ class ClaimTracker(commands.Cog):
     
     @parser("claim alert toggle", parent=get_alert_status)
     async def toggle_alert(self, ctx: commands.Context):
-        if not await self._config.perm_check(ctx, "group.staff"):
+        if not await Discord.rank_check(ctx, "Cosmonaut"):
             return
         if self._alertStatus >= 0:
             await self.dismiss_alert(disable=True)
