@@ -80,6 +80,7 @@ class MemberManager(commands.Cog):
                 await Discord.send(Config.channel_memberLog, text)
 
                 if GuildMember.is_ign_active(ign):
+                    member = GuildMember.get_member_named(ign)
                     await GuildMember.set_status(member.id, GuildMember.IDLE)
     
     @_ig_members_update.before_loop
