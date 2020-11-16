@@ -8,34 +8,13 @@ from logger import Logger
 from event import Event
 from wynnapi import WynnAPI
 from msgmaker import *
-from reactablemessage import PagedMessage
+from reactablemessage import RMessage
 from leaderboard import LeaderBoard
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
 from state.guildmember import GuildMember
 from cog.snapshotmanager import SnapshotManager
-
-
-# class GuildMember:
-
-#     def __init__(self, dMember: Member, rank: str, vRank: str, ign: str, mcId: str):
-#         Logger.bot.info(f"Added {dMember}({dMember.nick}) as guild member")
-#         self.id: int = dMember.id
-#         self.mcId = mcId
-#         self.discord = str(dMember)
-
-#         self.rank = rank
-#         self.vRank = vRank
-#         self.ign = ign
-
-#     def __repr__(self):
-#         s = "<GuildMember"
-#         properties = ["ign", "discord", "rank", "vRank", "mcId"]
-#         for p in properties:
-#             if hasattr(self, p):
-#                 s += f" {p}={getattr(self, p)}"
-#         return s + ">"
 
 
 IG_MEMBERS_UPDATE_INTERVAL = 3
@@ -234,7 +213,9 @@ class MemberManager(commands.Cog):
                 return
         else:
             pages = await self.make_members_pages(idle)
-        await PagedMessage(pages, ctx.channel).init()
+        
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
     
     async def make_members_missing_msg(self):
         igns = self._igMembers.copy()

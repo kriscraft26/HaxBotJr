@@ -9,7 +9,7 @@ from discord.ext import commands
 from logger import Logger
 from leaderboard import LeaderBoard
 from msgmaker import make_alert, COLOR_ERROR
-from reactablemessage import ReactableMessage
+from reactablemessage import RMessage
 from util.discordutil import Discord
 from state.state import State
 from state.config import Config
@@ -89,4 +89,4 @@ class HaxBotJr(commands.Bot):
         await super().on_command_error(ctx, e)
     
     async def on_reaction_add(self, reaction, user):
-        await ReactableMessage.update(reaction, user)
+        await RMessage.update(reaction, user)

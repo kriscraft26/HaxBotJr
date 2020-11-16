@@ -8,7 +8,7 @@ from logger import Logger
 from event import Event
 from wynnapi import WynnAPI
 from msgmaker import make_entry_pages, make_stat_entries, decorate_text
-from reactablemessage import PagedMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.timeutil import now as utcNow
 from util.discordutil import Discord
@@ -160,7 +160,8 @@ class ActivityTracker(commands.Cog):
         else:
             pages = await self._make_activity_pages()
 
-        await PagedMessage(pages, ctx.channel).init()
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
     
     @parser("act reset", parent=display_activity)
     async def reset_activity(self, ctx: commands.Context):

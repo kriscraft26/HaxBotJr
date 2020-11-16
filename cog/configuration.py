@@ -8,7 +8,6 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import *
-from reactablemessage import PagedMessage, ConfirmMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
@@ -69,11 +68,9 @@ class Configuration(commands.Cog):
                 text = f"There are no {name} set as {fieldDisplay}"
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
-            text = f"Are you sure to reset {fieldDisplay}? (currently {val})"
-            successText = f"Successfully reset {fieldDisplay}."
 
-            cb = lambda: setattr(Config, field, None)
-            logMsg = f"Reset {field} from {val} to None by {ctx.author}"
+            setattr(Config, field, None)
+            Logger.bot.info(f"Reset {field} from {val} to None by {ctx.author}")
         else:
             val = valParser(set_)
             if not val:
@@ -85,17 +82,13 @@ class Configuration(commands.Cog):
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
 
-            text = f"Are you sure to set {val} as {fieldDisplay}?"
-            successText = f"Successfully set {val} as {fieldDisplay}."
-
-            cb = lambda: setattr(Config, field, val.id)
+            setattr(Config, field, val.id)
             prev = getattr(Config, field)
             if prev:
                 prev = valGetter(prev)
-            logMsg = f"Changed {field} from {prev} to {val} by {ctx.author}"
+            Logger.bot.info(f"Changed {field} from {prev} to {val} by {ctx.author}")
         
-        await ConfirmMessage(
-            ctx, text, successText, self._config_change_cb, cb, logMsg).init()
+        await ctx.message.add_reaction("✅")
 
     @parser("config channel", ["type", 
         ("xpLog", "bwReport", "memberLog", "claimLog", "claimAlert")], 
@@ -136,23 +129,16 @@ class Configuration(commands.Cog):
                 text = f"{user} is not part of {type_} users."
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
-            
-            text = f"Are you sure to remove {user} from {type_} users?"
-            successText = f"Successfully removed {user} from {type_} users."
 
-            cb = lambda: getattr(Config, field).remove(user.id)
-            logMsg = f"Removed {user} from {field} by {ctx.author}"
+            getattr(Config, field).remove(user.id)
+            Logger.bot.info(f"Removed {user} from {field} by {ctx.author}")
         else:
             if user.id in users:
                 text = f"{user} is already part of {type_} users."
                 await ctx.send(embed=make_alert(text, color=COLOR_INFO))
                 return
 
-            text = f"Are you sure to add {user} to {type_} users?"
-            successText = f"Successfully added {user} to {type_} users."
-
-            cb = lambda: getattr(Config, field).add(user.id)
-            logMsg = f"Added {user} to {field} by {ctx.author}"
+            getattr(Config, field).add(user.id)
+            Logger.bot.info(f"Added {user} to {field} by {ctx.author}")
         
-        await ConfirmMessage(
-            ctx, text, successText, self._config_change_cb, cb, logMsg).init()
+        await ctx.message.add_reaction("✅")

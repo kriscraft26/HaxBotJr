@@ -1,10 +1,10 @@
-from discord import Message
+from discord import Message, Embed
 from discord.ext import commands
 
 from logger import Logger
 from msgmaker import *
 from leaderboard import LeaderBoard
-from reactablemessage import ReactableMessage, PagedMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from util.discordutil import Discord
@@ -19,7 +19,7 @@ class EmeraldTracker(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.provider = None
-        self.parseAlert: ReactableMessage = None
+        self.parseAlert: RMessage = None
         self.lastUpdateTimeStr = "owo"
 
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
@@ -47,12 +47,11 @@ class EmeraldTracker(commands.Cog):
             failedLineNum = self.parse_gu_list(text)
             self.lastUpdateTimeStr = now().strftime("%b %d, %H:%M:%S (UTC)")
 
-            color = COLOR_WARNING if failedLineNum else COLOR_SUCCESS
-            text = f"Successfully parsed! With **{failedLineNum}** failed line."
-            alert = make_alert(text, color=color)
+            text = f"✅ Successfully parsed! With **{failedLineNum}** failed line."
+            embed = Embed(title=text)
 
-            await self.parseAlert.edit_message(embed=alert)
-            await self.parseAlert.un_track()
+            await self.parseAlert.message.edit(embed=embed)
+            await self.parseAlert.remove_reaction("❌")
 
             self.provider = None
             self.parseAlert = None
@@ -85,7 +84,8 @@ class EmeraldTracker(commands.Cog):
             pages = await self._lb.create_pages(acc, total,
                 title=title, lastUpdate=self.lastUpdateTimeStr)
 
-        await PagedMessage(pages, ctx.channel).init()
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
 
     @parser("em parse", parent=display_emerald)
     async def start_parse(self, ctx: commands.Context):
@@ -97,25 +97,19 @@ class EmeraldTracker(commands.Cog):
             await ctx.send(alert)
             return
 
-        text = "Your next uploaded file will be parsed"
-        subtext = "react with ❌ to cancel this action"
-        alert = make_alert(text, subtext=subtext, color=COLOR_INFO)
-
-        msg = ReactableMessage(ctx.channel)
-        msg._init_send = lambda: ctx.send(embed=alert)
-        await msg.add_callback("❌", self.parse_cancel_cb, msg)
+        rMsg = RMessage(await ctx.send(embed=Embed(
+            title="ℹ Your next uploaded file will be parsed")), userId=ctx.author.id)
+        await rMsg.add_reaction("❌", self.parse_cancel_cb, rMsg)
 
         self.provider = ctx.author
-        self.parseAlert = msg
-        await msg.init()
+        self.parseAlert = rMsg
     
-    async def parse_cancel_cb(self, msg: ReactableMessage):
+    async def parse_cancel_cb(self, rMsg: RMessage):
         self.provider = None
         self.parseAlert = None
 
         alert = make_alert("Action canceled", color=COLOR_SUCCESS)
-        await msg.edit_message(embed=alert)
-        await msg.un_track()
+        await rMsg.delete()
     
     @parser("em fix", parent=display_emerald)
     async def fix_em(self, ctx: commands.Context):

@@ -6,7 +6,6 @@ from discord.ext import commands, tasks
 from logger import Logger
 from wynnapi import WynnAPI
 from msgmaker import *
-from reactablemessage import PagedMessage
 from util.timeutil import now, add_tz_info
 from util.cmdutil import parser
 from util.discordutil import Discord

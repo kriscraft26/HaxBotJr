@@ -5,180 +5,115 @@ from asyncio import sleep
 from discord import Message, TextChannel, Reaction
 from discord.ext.commands import Context
 
+from logger import Logger
 from msgmaker import *
 
 
-class ReactableMessage:
+class RMessage:
 
     MAX_ACTIVE_MESSAGE = 5
-    activeMsg = []
+    activeRMsg = []
 
-    def __init__(self, channel: TextChannel, userId=None, track=True):
-        self._reactions = {}
+    def __init__(self, msg: Message, userId=None):
         self.userId = userId
-        self.msg: Message = None
-        self.channel = channel
-        self.track = track
+        self.reactions = {}
+        self.message = msg
+        self.isResponsive = True
     
-    async def add_callback(self, reaction, cb, *args, **kwargs):
-        override = reaction in self._reactions
-        self._reactions[reaction] = (cb, args, kwargs)
-        if self.msg and not override:
-            await self.msg.add_reaction(reaction)
-            await sleep(0.25)
-    
-    async def remove_callback(self, reaction):
-        self._reactions.pop(reaction, 0)
-        if self.msg:
-            await self.msg.remove_reaction(reaction, self.msg.author)
-            await sleep(0.25)
-    
-    async def _init_send(self) -> Message:
-        raise NotImplementedError()
+    async def add_reaction(self, emoji, cb, *args, **kwargs):
+        if emoji not in self.reactions:
+            self.reactions[emoji] = (cb, args, kwargs)
 
-    async def init(self):
-        self.msg = await self._init_send()
-        
-        for reaction in self._reactions:
-            await self.msg.add_reaction(reaction)
+            self.isResponsive = False
+            await self.message.add_reaction(emoji)
             await sleep(0.25)
-        
-        if self.track:
-            if len(ReactableMessage.activeMsg) == ReactableMessage.MAX_ACTIVE_MESSAGE:
-                await ReactableMessage.activeMsg[0].un_track()
-            ReactableMessage.activeMsg.append(self)
+            self.isResponsive = True
+
+            if len(self.reactions) == 1:
+                RMessage._track_message(self)
     
-    async def un_track(self):
-        if self.track:
-            ReactableMessage.activeMsg.remove(self)
-            for reaction in self._reactions:
-                await sleep(0.25)
-                await self.msg.remove_reaction(reaction, self.msg.author)
+    async def remove_reaction(self, emoji):
+        if emoji in self.reactions:
+            del self.reactions[emoji]
+
+            self.isResponsive = False
+            await self.message.remove_reaction(emoji, self.message.author)
+            await sleep(0.25)
+            self.isResponsive = True
+
+            if len(self.reactions) == 0:
+                RMessage._untrack_message(self)
     
-    async def edit_message(self, **editArgs):
-        await self.msg.edit(**editArgs)
+    async def delete(self):
+        await self.message.delete()
+        self.message = None
+        RMessage._untrack_message(self)
     
-    async def delete_message(self):
-        await self.un_track()
-        await self.msg.delete()
+    @classmethod
+    def _track_message(cls, rMessage):
+        if rMessage not in cls.activeRMsg:
+            if len(cls.activeRMsg) == cls.MAX_ACTIVE_MESSAGE:
+                cls.activeRMsg.pop()
+            cls.activeRMsg.append(rMessage)
+    
+    @classmethod
+    def _untrack_message(cls, rMessage):
+        if rMessage in cls.activeRMsg:
+            cls.activeRMsg.remove(rMessage)
     
     @classmethod
     async def update(cls, reaction: Reaction, user):
-        targetMsg: Message = reaction.message
-        for msg in cls.activeMsg:
-            reactionCount = reaction.count
-            if targetMsg.id == msg.msg.id and reactionCount > 1:
-                if user.id != targetMsg.author.id:
+        for rMessage in cls.activeRMsg:
+            if reaction.message.id == rMessage.message.id and reaction.count > 1:
+                if rMessage.userId and user.id != rMessage.userId:
+                    return
+                if reaction.emoji in rMessage.reactions:
+                    (cb, args, kwargs) = rMessage.reactions[reaction.emoji]
+                    await cb(*args, **kwargs)
+                if user.id != reaction.message.author.id and rMessage.message:
                     try:
-                        await targetMsg.remove_reaction(reaction, user)
-                    except:
-                        pass
-                if msg.userId and user.id != msg.userId:
-                    return
-                if reaction.emoji in msg._reactions:
-                    (cb, args, kwargs) = msg._reactions[reaction.emoji]
-                    if iscoroutinefunction(cb):
-                        await cb(*args, **kwargs)
-                    else:
-                        cb(*args, **kwargs)
-                    return
+                        await rMessage.message.remove_reaction(reaction, user)
+                        await sleep(0.25)
+                    except Exception as e:
+                        Logger.bot.warning(str(e))
 
-
-class PagedMessage(ReactableMessage):
-
-    def __init__(self, pages, channel, userId=None, forceTrack=False):
-        super().__init__(channel, track=len(pages) > 1 or forceTrack, userId=userId)
-        self.pages = pages
+    async def add_pages(self, pages: list, appendCurr=False):
+        if len(pages) <= 1:
+            return
+        
         self.index = 0
+        if appendCurr:
+            pages.insert(0, self.message.content)
+
+        async def prev_pages():
+            if self.index:
+                self.index -= 1
+            else:
+                self.index = len(pages) - 1
+            await self.message.edit(content=pages[self.index])
+        await self.add_reaction("⬅", prev_pages)
+        
+        async def next_pages():
+            if self.index < len(pages) - 1:
+                self.index += 1
+            else:
+                self.index = 0
+            await self.message.edit(content=pages[self.index])
+        await self.add_reaction("➡", next_pages)
     
-    async def _init_send(self):
-        if len(self.pages) - 1:
-            await self.add_callback("⬅", self.prev_page)
-            await self.add_callback("➡", self.next_page)
-        return await self.channel.send(self.pages[0])
+    async def add_list_selection(self, entries, cb, *arg, **kwargs):
+        pages = []
+        slicedEntries = slice_entries(entries, maxEntries=5)
+        for i, pageEntries in enumerate(slicedEntries):
+            page = "\n".join([f"[{i + 1}] {e}" for i, e in enumerate(pageEntries)])
+            page += "\n" + make_page_indicator(len(slicedEntries), i)
+            pages.append(decorate_text(page))
+        await self.message.edit(content=pages[0])
+        await self.add_pages(pages)
 
-    async def next_page(self):
-        if self.index < len(self.pages) - 1:
-            self.index += 1
-        else:
-            self.index = 0
-        await self.edit_message(content=self.pages[self.index])
-
-    async def prev_page(self):
-        if self.index > 0:
-            self.index -= 1
-        else:
-            self.index = len(self.pages) - 1
-        await self.edit_message(content=self.pages[self.index])
-
-
-class ConfirmMessage(ReactableMessage):
-
-    def __init__(self, ctx: Context, text, successText, cb, *args, **kwargs):
-        super().__init__(ctx.channel, userId=ctx.author.id)
-        self.text = text
-        self.successText = successText
-        self.cb = cb
-        self.args = args
-        self.kwargs = kwargs
-        self.isCoroutine = iscoroutinefunction(cb)
-
-    async def _init_send(self):
-        alert = make_alert(self.text, color=COLOR_INFO)
-        await self.add_callback("✅", self._on_confirm)
-        await self.add_callback("❌", self.delete_message)
-        return await self.channel.send(embed=alert)
-    
-    async def _on_confirm(self):
-        if self.isCoroutine:
-            await self.cb(*self.args, **self.kwargs)
-        else:
-            self.cb(*self.args, **self.kwargs)
-        if self.successText:
-            alert = make_alert(self.successText, color=COLOR_SUCCESS)
-            await self.edit_message(embed=alert)
-            await self.un_track()
-        else:
-            await self.delete_message()
-
-
-class ListSelectionMessage(PagedMessage):
-
-    numEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
-
-    def __init__(self, ctx: Context, entries: List[str], cb, *args, **kwargs):
-        entryPages = slice_entries(entries, maxEntries=5)
-        pageNum = len(entryPages)
-        pages = [
-            self._make_page(entries, pageNum, i) for i, entries in enumerate(entryPages)]
-        super().__init__(pages, ctx.channel, userId=ctx.author.id, forceTrack=True)
-        self.entryPages = entryPages
-        isCoroutine = iscoroutinefunction(cb)
-        self.cbs = [self._wrap_cb(i, cb, isCoroutine) for i in range(5)]
-        self.args = args
-        self.kwargs = kwargs
-    
-    async def _init_send(self):
-        msg = await super()._init_send()
-        for i in range(5):
-            emoji = ListSelectionMessage.numEmojis[i]
-            await self.add_callback(emoji, self.cbs[i])
-        return msg
-    
-    def _wrap_cb(self, i, cb, isCoroutine):
-        if isCoroutine:
-            async def wrapped_cb():
-                entries = self.entryPages[self.index]
-                if i < len(entries):
-                    await cb(self, self.entryPages[self.index][i], *self.args, **self.kwargs)
-        else:
-            def wrapped_cb():
-                entries = self.entryPages[self.index]
-                if i < len(entries):
-                    cb(self, self.entryPages[self.index][i], *self.args, **self.kwargs)
-        return wrapped_cb
-
-    def _make_page(self, entries: List[str], pageNum, pageIndex):
-        page = "\n".join([f"[{i + 1}] {e}" for i, e in enumerate(entries)])
-        page += "\n" + make_page_indicator(pageNum, pageIndex)
-        return decorate_text(page)
+        for i, emoji in enumerate(["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]):
+            async def selection_cb(index):
+                targetEntries = slicedEntries[getattr(self, "index", 0)]
+                if index < len(targetEntries):
+                    await cb(targetEntries[index], *arg, **kwargs)
+            await self.add_reaction(emoji, selection_cb, i)

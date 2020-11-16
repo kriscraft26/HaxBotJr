@@ -10,7 +10,7 @@ from discord.ext import commands
 
 from logger import DEBUG_FILE, ARCHIVE_FOLDER, LOG_FILE, Logger
 from msgmaker import *
-from reactablemessage import ListSelectionMessage, ReactableMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil
 from util.discordutil import Discord
@@ -36,11 +36,12 @@ class RemoteDebugger(commands.Cog):
     @parser("debug archives", ["info"], parent=debug_root)
     async def list_archives(self, ctx: commands.Context, info):
         archives = self.infoArchives if info else self.debugArchives
-        await ListSelectionMessage(ctx, archives, self.send_archive_cb).init()
+        rMsg = RMessage(await ctx.send("-"))
+        await rMsg.add_list_selection(archives, self.send_archive_cb, ctx.channel)
     
-    async def send_archive_cb(self, msg: ReactableMessage, fileName):
+    async def send_archive_cb(self, fileName, channel):
         with gzip.open(os.path.join(ARCHIVE_FOLDER, fileName), "r") as f:
-            await msg.msg.channel.send(file=File(f, filename=fileName[:-3]))
+            await channel.send(file=File(f, filename=fileName[:-3]))
 
     @parser("debug data", "dataName", parent=debug_root)
     async def get_data(self, ctx: commands.Context, dataName):

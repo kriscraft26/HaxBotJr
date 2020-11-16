@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import *
-from reactablemessage import PagedMessage
+from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.pickleutil import PickleUtil, pickle
 from util.timeutil import now, get_bw_range
@@ -102,7 +102,8 @@ class SnapshotManager(commands.Cog):
     async def display_snapshots(self, ctx: commands.Context):
         ids = [f[:-9] for f in listdir("./snapshot/") if f.endswith(".snapshot")]
         pages = make_entry_pages(ids, title="Snapshots")
-        await PagedMessage(pages, ctx.channel).init()
+        rMsg = RMessage(await ctx.send(pages[0]))
+        await rMsg.add_pages(pages)
 
     @parser("snap forcemake", parent=display_snapshots)
     async def force_make_snapshot(self, ctx: commands.Context):
