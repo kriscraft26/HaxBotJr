@@ -3,6 +3,7 @@ from discord import Member
 from logger import Logger
 from event import Event
 from wynnapi import WynnAPI
+from asyncdict import AsyncDict
 from state.state import State
 from util.discordutil import Discord
 
@@ -29,6 +30,7 @@ class GuildMember:
                 if member.ownerId not in cls.altMap:
                     cls.altMap[member.ownerId] = set()
                 cls.altMap[member.ownerId].add(member.id)
+        cls.members = AsyncDict(cls.members)
 
     @classmethod
     async def add(cls, dMember: Member, ranks):
@@ -162,16 +164,6 @@ class GuildMember:
             Logger.bot.info(f"{prevIgn} changed ign to {currIgn}")
             await Event.broadcast("memberIgnChange", id_, prevIgn)
             return True
-    
-    @classmethod
-    async def iterate(cls, filter_=None, mapper=None):
-        members = cls.members.values()
-        if filter_:
-            members = filter(filter_, members)
-        if mapper:
-            members = map(mapper, members)
-        for member in members:
-            yield member
     
     @classmethod
     def get_member_named(cls, ign):

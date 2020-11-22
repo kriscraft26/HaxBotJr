@@ -82,14 +82,16 @@ class SnapshotManager(commands.Cog):
         snapshot = await self.get_snapshot(ctx, snapId)
         if not snapshot:
             return
-        await ctx.send(decorate_text(f" following result is from Snapshot {snapId}"))
 
         result = snapshot
         for path in paths:
-            if path not in result:
+            try:
+                result = result[path]
+            except Exception:
                 await ctx.send("`The requested command was not saved in the given snapshot.`")
                 return
-            result = result[path]
+
+        await ctx.send(decorate_text(f" following result is from Snapshot {snapId}"))
         return result
     
     async def make_lb_snapshot(self, lb, **decoArgs):

@@ -3,13 +3,13 @@ from discord.ext import commands
 
 from logger import Logger
 from msgmaker import *
-from leaderboard import LeaderBoard
 from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.timeutil import now
 from util.discordutil import Discord
 from state.config import Config
 from state.guildmember import GuildMember
+from state.statistic import Statistic
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -24,14 +24,14 @@ class EmeraldTracker(commands.Cog):
 
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
-        self._lb: LeaderBoard = LeaderBoard.get_lb("emerald")
-
         self._snapshotManager.add("EmeraldTracker", self)
     
     async def __snap__(self):
         title = "Emerald Contribution Leader Board"
-        return await self._snapshotManager.make_lb_snapshot(self._lb, 
-            title=title, lastUpdate=self.lastUpdateTimeStr)
+        return (
+            await self.make_emerald_lb_pages(False),
+            await self.make_emerald_lb_pages(True)
+        )
     
     @commands.Cog.listener()
     async def on_message(self, message: Message):
@@ -66,23 +66,37 @@ class EmeraldTracker(commands.Cog):
                 ign = sections[0].split(" ")[-1]
                 if GuildMember.is_ign_active(ign):
                     em = int(sections[2][:-1])
-                    self._lb.set_stat(GuildMember.ignIdMap[ign], em)
+                    Statistic.stats[GuildMember.ignIdMap[ign]].update_emerald(em)
             except Exception:
                 failedLineNum += 1
         return failedLineNum
-
-    @parser("em", ["acc"], ["total"], "-snap", isGroup=True)
-    async def display_emerald(self, ctx: commands.Context, acc, total, snap):
-        if snap:
-            snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
-                "EmeraldTracker")
-            if not snapshot:
-                return
-            pages = snapshot[acc][total]
+    
+    async def make_emerald_lb_pages(self, total):
+        if total:
+            lb = Statistic.emeraldTotalLb
+            field = "total"
+            titlePrefix = "Total "
         else:
-            title = "Emerald Contribution Leader Board"
-            pages = await self._lb.create_pages(acc, total,
-                title=title, lastUpdate=self.lastUpdateTimeStr)
+            lb = Statistic.emeraldLb
+            field = "biweek"
+            titlePrefix = "Bi-Weekly "
+
+        valGetter = lambda m: Statistic.stats[m.id].emerald[field]
+        filter_ = lambda m: m.status != GuildMember.REMOVED
+        
+        return make_entry_pages(await make_stat_entries(
+            valGetter, filter_=filter_, lb=lb),
+            title=titlePrefix + "Emerald Leader Board", lastUpdate=self.lastUpdateTimeStr)
+
+    @parser("em", ["total"], "-snap", isGroup=True)
+    async def display_emerald(self, ctx: commands.Context, total, snap):
+        if snap:
+            pages = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
+                "EmeraldTracker", total)
+            if not pages:
+                return
+        else:
+            pages = await self.make_emerald_lb_pages(total)
 
         rMsg = RMessage(await ctx.send(pages[0]))
         await rMsg.add_pages(pages)
@@ -115,13 +129,3 @@ class EmeraldTracker(commands.Cog):
     async def fix_em(self, ctx: commands.Context):
         if not await Discord.user_check(ctx, *Config.user_dev):
             return
-        
-        id_ = GuildMember.ignIdMap["Carrota"]
-        self._lb._total[id_] = self._lb.get_total(id_) + 12608
-        self._lb._rank(id_, self._lb._totalLb, self._lb.get_total)
-
-        self._lb._acc[id_] = self._lb.get_acc(id_) + 12608
-        self._lb._rank(id_, self._lb._accLb, self._lb.get_acc)
-
-        self._lb._bw[id_] = self._lb.get_bw(id_) + 12608
-        self._lb._rank(id_, self._lb._bwLb, self._lb.get_bw)

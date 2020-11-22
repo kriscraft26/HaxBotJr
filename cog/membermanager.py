@@ -9,11 +9,11 @@ from event import Event
 from wynnapi import WynnAPI
 from msgmaker import *
 from reactablemessage import RMessage
-from leaderboard import LeaderBoard
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
 from state.guildmember import GuildMember
+from state.statistic import Statistic
 from cog.snapshotmanager import SnapshotManager
 
 
@@ -37,8 +37,11 @@ class MemberManager(commands.Cog):
         self._ig_members_update.start()
 
     async def __snap__(self):
+        with GuildMember.members:
+            statsSnaps = {m.ign: self.make_stats_msg(m) async for m in 
+                GuildMember.members.avalues()}
         return {
-            "stats": {m.ign: self.make_stats_msg(m) async for m in GuildMember.iterate()},
+            "stats": statsSnaps,
             "members": await self.make_members_pages(False),
             "members.idle": await self.make_members_pages(True),
             "members.missing": await self.make_members_missing_msg()
@@ -150,32 +153,33 @@ class MemberManager(commands.Cog):
             else:
                 await GuildMember.set_status(gMember.id, GuildMember.IDLE)
     
-    def make_stats_msg(self, member: GuildMember):
-        statInfo = LeaderBoard.get_entry(member.id)
-        xp = statInfo["xpBw"]
-        em = statInfo["emeraldBw"]
-        wc = statInfo["warCountBw"]
-        statTemplate = f"%-{len(str(max(xp[0], em[0], wc[0])))}d #%d"
+    def make_stats_msg(self, member: GuildMember):        
+        stat: Statistic = Statistic.stats[member.id]
+
+        statNames = ("xp", "emerald", "war")
+        biWeekStats = {name: f"{getattr(stat, name)['biweek']:,}" for name in statNames}
+        totalStats = {name: f"{getattr(stat, name)['total']:,}" for name in statNames}
+
+        maxStatLen = max(
+            max(map(len, biWeekStats.values())), 
+            max(map(len, totalStats.values())), 11)
+        fmt = f"%-8s  %-{maxStatLen}s #%d\n"
+
+        text = "--Bi-Weekly--\n"
+        for name, val in biWeekStats.items():
+            rank = getattr(Statistic, name + "Lb").index(stat.id) + 1
+            text += fmt % (name, val, rank)
+
+        text += fmt % (
+            "activity", format_act_dt(stat.onlineTime["biweek"]), 
+            Statistic.onlineTimeBwLb.index(stat.id) + 1) 
         
-        if member.ownerId:
-            title = GuildMember.members[member.ownerId].ign + " " + member.ign
-            text = ""
-        elif member.discordId:
-            title = str(Discord.guild.get_member(member.discordId)) + " " + member.ign
-            text = f"rank     {member.rank}\n"
-            if member.vRank:
-                text += f"title    {member.vRank}\n"
-            text += "-------\n"
-        else:
-            title = member.ign
-            text = ""
+        text += "--Total--\n"
+        for name, val in totalStats.items():
+            rank = getattr(Statistic, name + "TotalLb").index(stat.id) + 1
+            text += fmt % (name, val, rank)
 
-        text += f"xp       {statTemplate % xp}\n"
-        text += f"emerald  {statTemplate % em}\n"
-        text += f"war      {statTemplate % wc}\n-------\n"
-        text += f"status   {member.status}"
-
-        return decorate_text(text, title=title)
+        return decorate_text(text, title=make_member_title(member))
 
     @parser("stats", "ign", "-snap")
     async def display_stats(self, ctx: commands.Context, ign, snap):
@@ -222,8 +226,9 @@ class MemberManager(commands.Cog):
         igns = self._igMembers.copy()
         filter_ = lambda m: m.status == GuildMember.ACTIVE
         mapper = lambda m: igns.remove(m.ign)
-        async for _ in GuildMember.iterate(filter_, mapper):
-            pass
+        with GuildMember.members:
+            async for _ in GuildMember.members.avalues(filter_, mapper):
+                pass
         return ", ".join(igns)
 
     @parser("members missing", "-snap", parent=display_members)
@@ -243,7 +248,7 @@ class MemberManager(commands.Cog):
     async def fix_members(self, ctx):
         if not await Discord.user_check(ctx, *Config.user_dev):
             return
-        for member in self.members.values():
+        for member in self.members.avalues():
             member.mcId = await WynnAPI.get_player_id(member.ign)
             await sleep(0.2)
     
@@ -268,12 +273,16 @@ class MemberManager(commands.Cog):
         if not owner:
             await ctx.send(f"`{main} is not a guild member.`")
             return
-        if not await GuildMember.add_alt(owner.id, alt):
+        
+        altId = await GuildMember.add_alt(owner.id, alt)
+        if not altId:
             if alt in GuildMember.ignIdMap:
                 await ctx.send(f"`{alt} is already an alt.`")
             else:
                 await ctx.send(f"`the player {alt} doesn't exist.`")
             return
+        if alt not in self._igMembers:
+            await GuildMember.set_status(altId, GuildMember.IDLE)
         await ctx.message.add_reaction("✅")
     
     @parser("alt remove", "alt", parent=display_alt)

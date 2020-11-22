@@ -5,11 +5,11 @@ from discord.ext import commands, tasks
 
 from logger import Logger
 from msgmaker import decorate_text
-from leaderboard import LeaderBoard
 from util.cmdutil import parser
 import util.timeutil as timeutil
 from util.discordutil import Discord
 from state.config import Config
+from state.statistic import Statistic
 from cog.remotedebugger import RemoteDebugger
 from cog.snapshotmanager import SnapshotManager
 from cog.activitytracker import ActivityTracker
@@ -27,7 +27,6 @@ class DateClock(commands.Cog):
 
         self._remoteDebugger: RemoteDebugger = bot.get_cog("RemoteDebugger")
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
-        self._actTracker: ActivityTracker = bot.get_cog("ActivityTracker")
 
         self._update_loop_interval()
         self._daily_loop.start()
@@ -56,8 +55,7 @@ class DateClock(commands.Cog):
     async def _bw_callback(self):
         Logger.bot.debug(f"Bi week transitioned at {timeutil.now()}")
         await self._snapshotManager.save_snapshot()
-        LeaderBoard.reset_all_bw()
-        self._actTracker.biweekly_reset()
+        Statistic.reset_biweekly()
 
     def _update_loop_interval(self):
         now = timeutil.now()
@@ -79,8 +77,6 @@ class DateClock(commands.Cog):
         if not await Discord.user_check(ctx, *Config.user_dev):
             return
         if cbType == "bwReport":
-            for seg in Discord.split_text(LeaderBoard.get_lb("xp").create_bw_report()):
-                await Discord.send(Config.channel_bwReport, seg)
             return
         func = self._daily_callback if cbType == "daily" else self._bw_callback
         await func()

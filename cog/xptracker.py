@@ -1,14 +1,15 @@
 from discord.ext import tasks, commands
 
 from logger import Logger
+from event import Event
 from wynnapi import WynnAPI
 from msgmaker import *
-from leaderboard import LeaderBoard
 from reactablemessage import RMessage
 from util.cmdutil import parser
 from util.discordutil import Discord
 from state.config import Config
 from state.guildmember import GuildMember
+from state.statistic import Statistic
 from cog.datamanager import DataManager
 from cog.snapshotmanager import SnapshotManager
 
@@ -26,16 +27,24 @@ class XPTracker(commands.Cog):
         self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
-        self._lb: LeaderBoard = LeaderBoard.get_lb("xp")
-        self._lastLoggedVal = {}
+        self._logEntries = {}
 
         self._update.start()
         self._xp_log.start()
         self._snapshotManager.add("XPTracker", self)
+
+        Event.listen("xpChange", self.on_xp_change)
     
     async def __snap__(self):
-        return await self._snapshotManager.make_lb_snapshot(self._lb, 
-            title="XP Leader Board", api=self._guildStatsTracker)
+        return (
+            await self.make_xp_lb_pages(False),
+            await self.make_xp_lb_pages(True)
+        )
+
+    async def on_xp_change(self, id_, diff):
+        if id_ not in self._logEntries:
+            self._logEntries[id_] = 0
+        self._logEntries[id_] += diff
 
     @tasks.loop(seconds=XP_UPDATE_INTERVAL)
     async def _update(self):
@@ -43,11 +52,10 @@ class XPTracker(commands.Cog):
         if not guildStats:
             return
 
-
         for memberData in guildStats["members"]:
             if GuildMember.is_ign_active(memberData["name"]):
                 id_ = GuildMember.ignIdMap[ memberData["name"]]
-                self._lb.set_stat(id_,  memberData["contributed"])
+                await Statistic.stats[id_].update_xp(memberData["contributed"])
     
     @_update.before_loop
     async def _before_update(self):
@@ -57,42 +65,50 @@ class XPTracker(commands.Cog):
     @tasks.loop(minutes=XP_LOG_INTERVAL)
     async def _xp_log(self):
         filter_ = lambda m: m.status == GuildMember.ACTIVE
-        mapper = lambda m: m.id
 
-        async for id_ in GuildMember.iterate(filter_, mapper):
-            stat = self._lb.get_stat(id_)
-            prev = self._lastLoggedVal.get(id_, -1)
-            if prev == -1:
-                self._lastLoggedVal[id_] = stat
-                continue
+        logs = []
+        for id_, diff in self._logEntries.items():
+            xpStat = Statistic.stats[id_].xp
 
-            dxp = stat - prev
-            if not dxp:
-                continue
-            text = "  |  ".join([
-                f"**{GuildMember.members[id_].ign}** (+{dxp:,})",
-                f"__Total__ -> {self._lb.get_total(id_):,}",
-                f"__Acc__ -> {self._lb.get_acc(id_):,}",
-                f"__BW__ -> {self._lb.get_bw(id_):,}"])
-            await Discord.send(Config.channel_xpLog, text)
-            self._lastLoggedVal[id_] = stat
+            logs.append("  |  ".join([
+                f"**{GuildMember.members[id_].ign}** +{diff:,}",
+                f"__Total__ -> {xpStat['total']:,}",
+                f"__Bi-Week__ -> {xpStat['biweek']:,}"]))
+        self._logEntries.clear()
+        for log in logs:
+            await Discord.send(Config.channel_xpLog, log)
     
     @_xp_log.before_loop
     async def _before_xp_log(self):
         await self.bot.wait_until_ready()
         Logger.bot.debug("Starting xp logging loop")
     
-    @parser("xp", ["acc"], ["total"], "-snap", isGroup=True)
-    async def display_xp_lb(self, ctx: commands.Context, acc, total, snap):
-        if snap:
-            snapshot = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
-                "XPTracker")
-            if not snapshot:
-                return
-            pages = snapshot[acc][total]
+    async def make_xp_lb_pages(self, total):
+        if total:
+            lb = Statistic.xpTotalLb
+            field = "total"
+            titlePrefix = "Total "
         else:
-            pages = await self._lb.create_pages(acc, total,
-                title="XP Leader Board", api=self._guildStatsTracker)
+            lb = Statistic.xpLb
+            field = "biweek"
+            titlePrefix = "Bi-Weekly "
+
+        valGetter = lambda m: Statistic.stats[m.id].xp[field]
+        filter_ = lambda m: m.status != GuildMember.REMOVED
+        
+        return make_entry_pages(await make_stat_entries(
+            valGetter, filter_=filter_, lb=lb),
+            title=titlePrefix + "XP Leader Board", api=self._guildStatsTracker)
+    
+    @parser("xp", ["total"], "-snap", isGroup=True)
+    async def display_xp_lb(self, ctx: commands.Context, total, snap):
+        if snap:
+            pages = await self._snapshotManager.get_snapshot_cmd(ctx, snap, 
+                "XPTracker", total)
+            if not pages:
+                return
+        else:
+            pages = await self.make_xp_lb_pages(total)
         
         rMsg = RMessage(await ctx.send(pages[0]))
         await rMsg.add_pages(pages)

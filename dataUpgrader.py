@@ -3,6 +3,9 @@ import os
 from pprint import pformat
 import datetime
 
+from state.guildmember import GuildMember
+from state.statistic import Statistic
+
 
 class Data:
 
@@ -22,47 +25,40 @@ class Data:
             self.data[new] = self.data.pop(old)
 
 
-memberManager = Data("MemberManager")
-members = memberManager.data["members"].copy()
-for k, m in memberManager.data["members"].items():
-    if not hasattr(m, "mcId"):
-        continue
-    members[m.mcId] = m
-    del members[k]
-    m.discordId = m.id
-    m.id = m.mcId
-    del m.mcId
-    del m.discord
-    isIdle = k in memberManager.data["idleMembers"]
-    m.status = "idle" if isIdle else "active"
-    m.ownerId = None
-memberManager.data = {"members": members}
-discordIdMap = {members[id_].discordId: id_ for id_ in members}
-memberManager.save(newName="GuildMember")
+emLb = Data("LeaderBoard.emerald")
+warLb = Data("LeaderBoard.warCount")
+xpLb = Data("LeaderBoard.xp")
+act = Data("ActivityTracker")
+members = Data("GuildMember").data["members"]
+
+stats = {}
 
 
-actTracker = Data("ActivityTracker")
-val = actTracker.data["activities"]
-newVal = {}
-for dId, id_ in discordIdMap.items():
-    if dId in val:
-        newVal[id_] = val[dId]
-    else:
-        newVal[id_] = [datetime.timedelta(0), datetime.timedelta(0), False, None]
-actTracker.data["activities"] = newVal
-actTracker.save()
+def sync_contribution(id_, lb, accumulator):
+    real = lb.data["_stats"].get(id_, 0)
+    total = lb.data["_total"].get(id_, 0)
+    bw = lb.data["_bw"].get(id_, 0)
+
+    accumulator.real = real
+    accumulator.entries["total"] = max(real, total)
+    accumulator.entries["biweek"] = bw
 
 
-def updateLb(name):
-    lb = Data("LeaderBoard." + name)
-    for field, val in lb.data.items():
-        if field.endswith("Lb"):
-            newVal = list(map(discordIdMap.get, val))
-        else:
-            newVal = {discordIdMap[dId]: v for dId, v in val.items()}
-        lb.data[field] = newVal
-    lb.save()
+for m in members.avalues():
+    if m.status != "removed":
+        stat = Statistic(m.id)
+        sync_contribution(m.id, xpLb, stat.xp)
+        sync_contribution(m.id, emLb, stat.emerald)
 
-updateLb("xp")
-updateLb("emerald")
-updateLb("warCount")
+        stat.war.entries["total"] = warLb.data["_stats"].get(m.id, 0)
+        stat.war.entries["biweek"] = warLb.data["_bw"].get(m.id, 0)
+
+        [total, curr, _, world] = act.data["activities"][m.id]
+        stat.onlineTime.entries["total"] = total
+        stat.onlineTime.entries["curr"] = curr
+        stat.world = world
+
+        stats[m.id] = stat
+
+with open("./data/Statistic.data", "wb") as file:
+    pickle.dump({"stats": stats}, file, pickle.HIGHEST_PROTOCOL)

@@ -1,10 +1,12 @@
 from typing import List
-from math import ceil
+from math import ceil, trunc
 
 from discord import Embed
 
 from wynnapi import WynnData
+from util.discordutil import Discord
 from state.guildmember import GuildMember
+from state.statistic import Statistic
 
 
 COLOR_ERROR = 0xfe5e41
@@ -24,6 +26,7 @@ def make_alert(text, title="", subtext=None, color: int=COLOR_ERROR) -> Embed:
 
 def decorate_text(text, sh="haskell", title=None, info=None, 
         api=None, lastUpdate=None) -> str:
+    text = text.strip()
     if api:
         text = f"{text}\n\nUpdated {api.getLastUpdateDTime().seconds}s ago."
     elif lastUpdate:
@@ -67,16 +70,17 @@ async def make_stat_entries(valGetter, nameGetter=None, group=True, filter_=None
 
     if lb:
         members = map(GuildMember.members.get, lb)
-        for member in filter(filter_, members) if filter_ else members:
+        for member in (filter(filter_, members) if filter_ else members):
             name = nameGetter(member)
             maxNameLen = max(maxNameLen, len(name))
             data.append((name, valGetter(member)))
     else:
-        async for member in GuildMember.iterate(filter_):
-            val = valGetter(member)
-            name = nameGetter(member)
-            maxNameLen = max(maxNameLen, len(name))
-            data.append((name, val))
+        with GuildMember.members:
+            async for member in GuildMember.members.avalues(filter_):
+                val = valGetter(member)
+                name = nameGetter(member)
+                maxNameLen = max(maxNameLen, len(name))
+                data.append((name, val))
 
     entryFmt = "%s{:<%d}  |  {:%s}" % (
         "[{:<%d}]  " % len(str(len(data))) if rank else "", maxNameLen, "," if group else "")
@@ -85,3 +89,22 @@ async def make_stat_entries(valGetter, nameGetter=None, group=True, filter_=None
     for i, (name, val) in enumerate(data):
         entries.append(entryFmt.format(*((i + 1, name, val) if rank else (name, val))))
     return entries
+
+
+def make_member_title(member):
+    if member.ownerId:
+        return GuildMember.members[member.ownerId].ign + " " + member.ign
+    elif member.discordId:
+        return str(Discord.guild.get_member(member.discordId)) + " " + member.ign
+    else:
+        return member.ign
+
+
+def format_act_dt(dt):
+    days = dt.days
+    seconds = trunc(dt.seconds)
+    hours = seconds // 3600
+    minutes = seconds // 60 % 60
+    seconds = seconds % 60
+
+    return f"{days:02} {hours:02}:{minutes:02}:{seconds:02}"
