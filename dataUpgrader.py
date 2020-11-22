@@ -44,7 +44,7 @@ def sync_contribution(id_, lb, accumulator):
     accumulator.entries["biweek"] = bw
 
 
-for m in members.avalues():
+for m in members.values():
     if m.status != "removed":
         stat = Statistic(m.id)
         sync_contribution(m.id, xpLb, stat.xp)
