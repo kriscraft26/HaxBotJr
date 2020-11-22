@@ -149,7 +149,7 @@ class Vote:
             await Discord.Channels.expedition.send(embed=embed)
         
         message = await Discord.Channels.expedition.fetch_message(self.voteMsg)
-        await message.unpin(reason="Vote ended")
+        await message.delete()
     
     async def check(self, ctx):
         if self.default and self.default not in self.options:
