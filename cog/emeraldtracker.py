@@ -44,7 +44,7 @@ class EmeraldTracker(commands.Cog):
 
             text = (await attachments[0].read()).decode("utf-8")
 
-            failedLineNum = self.parse_gu_list(text)
+            failedLineNum = await self.parse_gu_list(text)
             self.lastUpdateTimeStr = now().strftime("%b %d, %H:%M:%S (UTC)")
 
             text = f"✅ Successfully parsed! With **{failedLineNum}** failed line."
@@ -56,7 +56,7 @@ class EmeraldTracker(commands.Cog):
             self.provider = None
             self.parseAlert = None
 
-    def parse_gu_list(self, text: str):
+    async def parse_gu_list(self, text: str):
         failedLineNum = 0
         for line in text.split("\n"):
             if not line:
@@ -66,7 +66,7 @@ class EmeraldTracker(commands.Cog):
                 ign = sections[0].split(" ")[-1]
                 if GuildMember.is_ign_active(ign):
                     em = int(sections[2][:-1])
-                    Statistic.stats[GuildMember.ignIdMap[ign]].update_emerald(em)
+                    await Statistic.stats[GuildMember.ignIdMap[ign]].update_emerald(em)
             except Exception:
                 failedLineNum += 1
         return failedLineNum
