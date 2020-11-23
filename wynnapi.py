@@ -6,6 +6,7 @@ import backoff
 
 from util.timeutil import now
 from logger import Logger
+from state.apistamp import APIStamp
 
 
 LEGACY_URL_BASE = "https://api.wynncraft.com/public_api.php"
@@ -16,10 +17,11 @@ MOJANG_UUID_URL = "https://api.mojang.com/users/profiles/minecraft/%s?at=%s"
 MOJANG_IGN_URL = "https://api.mojang.com/user/profiles/%s/names"
 
 
-class WynnData:
+class APIEndpoint:
 
     def __init__(self, **params):
         self._data: dict = None
+        self._receivers = set()
         self.url = LEGACY_URL_BASE
         self.params = params
     
@@ -29,38 +31,35 @@ class WynnData:
             if resp.status != 200:
                 Logger.bot.warning(f"failed request {self.params} with {resp.status}")
                 return
-            self._data = await resp.json()
+            resp = await resp.json()
+            if APIStamp.set_stamp(self.params, resp["request"]["timestamp"]):
+                self._data = resp
+                for receiver in self._receivers:
+                    receiver._isUpdated = True
     
-    def get_tracker(self):
-        return WynnData.Tracker(self)
+    def create_receiver(self):
+        receiver = APIEndpoint.Receiver(self)
+        self._receivers.add(receiver)
+        return receiver
     
-    class Tracker:
+    class Receiver:
         
-        def __init__(self, wynnData):
-            self.lastTimestamp = -1
-            self.lastUpdateTime: datetime = None
-            self._wynnDta = wynnData
+        def __init__(self, endpoint):
+            self._isUpdated = False
+            self._endpoint = endpoint 
         
         def getData(self) -> Union[dict, None]:
-            if self._wynnDta._data:
-                currTs = self._wynnDta._data["request"]["timestamp"]
-                if currTs > self.lastTimestamp:
-                    self.lastUpdateTime = now()
-                    self.lastTimestamp = currTs
-                    return self._wynnDta._data
+            if self._isUpdated:
+                self._isUpdated = False
+                return self._endpoint._data
             return None
-        
-        def getLastUpdateDTime(self) -> timedelta:
-            if not self.lastUpdateTime:
-                return timedelta(seconds=0)
-            return now() - self.lastUpdateTime
 
 
 class WynnAPI:
 
-    guildStats = WynnData(action="guildStats", command="HackForums")
-    serverList = WynnData(action="onlinePlayers")
-    terrList = WynnData(action="territoryList")
+    guildStats = APIEndpoint(action="guildStats", command="HackForums")
+    serverList = APIEndpoint(action="onlinePlayers")
+    terrList = APIEndpoint(action="territoryList")
 
     _session: aiohttp.ClientSession = None
 

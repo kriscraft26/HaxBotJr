@@ -27,7 +27,7 @@ class MemberManager(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.hasInitMembersUpdate = False
 
-        self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
+        self._guildStatsReceiver = WynnAPI.guildStats.create_receiver()
         self._igMembers: Set[str] = set()
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
@@ -49,7 +49,7 @@ class MemberManager(commands.Cog):
     
     @tasks.loop(seconds=IG_MEMBERS_UPDATE_INTERVAL)
     async def _ig_members_update(self):
-        guildStats = self._guildStatsTracker.getData()
+        guildStats = self._guildStatsReceiver.getData()
         if not guildStats:
             return
         

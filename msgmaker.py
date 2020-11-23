@@ -3,10 +3,11 @@ from math import ceil, trunc
 
 from discord import Embed
 
-from wynnapi import WynnData
 from util.discordutil import Discord
+from util.timeutil import now
 from state.guildmember import GuildMember
 from state.statistic import Statistic
+from state.apistamp import APIStamp
 
 
 COLOR_ERROR = 0xfe5e41
@@ -25,10 +26,11 @@ def make_alert(text, title="", subtext=None, color: int=COLOR_ERROR) -> Embed:
 
 
 def decorate_text(text, sh="haskell", title=None, info=None, 
-        api=None, lastUpdate=None) -> str:
+        endpoint=None, lastUpdate=None) -> str:
     text = text.strip()
-    if api:
-        text = f"{text}\n\nUpdated {api.getLastUpdateDTime().seconds}s ago."
+    if endpoint:
+        updateTime = APIStamp.stamps[id(endpoint.params)][1]
+        text = f"{text}\n\nUpdated {trunc((now() - updateTime).total_seconds())}s ago."
     elif lastUpdate:
         text = f"{text}\n\nLast updated at {lastUpdate}."
     if info:

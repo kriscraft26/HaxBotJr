@@ -24,7 +24,7 @@ class XPTracker(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        self._guildStatsTracker = WynnAPI.guildStats.get_tracker()
+        self._guildStatsReceiver = WynnAPI.guildStats.create_receiver()
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._logEntries = {}
@@ -48,7 +48,7 @@ class XPTracker(commands.Cog):
 
     @tasks.loop(seconds=XP_UPDATE_INTERVAL)
     async def _update(self):
-        guildStats = self._guildStatsTracker.getData()
+        guildStats = self._guildStatsReceiver.getData()
         if not guildStats:
             return
 
@@ -98,7 +98,7 @@ class XPTracker(commands.Cog):
         
         return make_entry_pages(await make_stat_entries(
             valGetter, filter_=filter_, lb=lb),
-            title=titlePrefix + "XP Leader Board", api=self._guildStatsTracker)
+            title=titlePrefix + "XP Leader Board", endpoint=WynnAPI.guildStats)
     
     @parser("xp", ["total"], "-snap", isGroup=True)
     async def display_xp_lb(self, ctx: commands.Context, total, snap):

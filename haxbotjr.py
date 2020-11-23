@@ -14,6 +14,7 @@ from state.state import State
 from state.config import Config
 from state.guildmember import GuildMember
 from state.statistic import Statistic
+from state.apistamp import APIStamp
 from cog.datamanager import DataManager
 from cog.configuration import Configuration
 from cog.wynnapi import WynnAPI
@@ -48,6 +49,7 @@ class HaxBotJr(commands.Bot):
         await State.load(Config)
         await State.load(GuildMember)
         await State.load(Statistic)
+        await State.load(APIStamp)
 
         self.add_cog(Configuration(self))
         self.add_cog(WynnAPI(self, HaxBotJr.session))

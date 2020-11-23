@@ -25,7 +25,7 @@ class ClaimTracker(commands.Cog):
         self._claimNameOrder = []
         self._allTerrs = set()
 
-        self._terrListTracker = WynnAPI.terrList.get_tracker()
+        self._terrListReceiver = WynnAPI.terrList.create_receiver()
 
         self._hasInitClaimUpdate = False
         # -1 = disabled
@@ -46,7 +46,7 @@ class ClaimTracker(commands.Cog):
 
     @tasks.loop(seconds=CLAIM_UPDATE_INTERVAL)
     async def _claim_update(self):
-        claimList = self._terrListTracker.getData()
+        claimList = self._terrListReceiver.getData()
         if not claimList:
             return
         claimList = claimList["territories"]
@@ -199,7 +199,7 @@ class ClaimTracker(commands.Cog):
                 entries.append(f"––{entry}  [{guild}]")
         
         await ctx.send(decorate_text("\n".join(entries), 
-            title="Claims", api=self._terrListTracker))
+            title="Claims", endpoint=WynnAPI.terrList))
     
     @parser("claim add", "terrs...", parent=display_claims)
     async def add_claims(self, ctx: commands.Context, terrs):

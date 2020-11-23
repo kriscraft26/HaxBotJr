@@ -26,7 +26,7 @@ class ActivityTracker(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self._snapManager: SnapshotManager = bot.get_cog("SnapshotManager")
-        self._serverListTracker = WynnAPI.serverList.get_tracker()
+        self._serverListReceiver = WynnAPI.serverList.create_receiver()
 
         self.lastUpdateTime = utcNow()
         self.bot = bot
@@ -41,7 +41,7 @@ class ActivityTracker(commands.Cog):
     
     @tasks.loop(minutes=ACTIVITY_UPDATE_INTERVAL)
     async def _activity_update(self):        
-        serverList = self._serverListTracker.getData()
+        serverList = self._serverListReceiver.getData()
         if not serverList:
             return
         

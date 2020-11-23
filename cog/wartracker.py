@@ -26,7 +26,7 @@ class WarTracker(commands.Cog):
         self.currentWar = None
         self.hasInitUpdated = False
 
-        self._serverListTracker = WynnAPI.serverList.get_tracker()
+        self._serverListReceiver = WynnAPI.serverList.create_receiver()
         self._snapshotManager: SnapshotManager = bot.get_cog("SnapshotManager")
 
         self._update.start()
@@ -40,7 +40,7 @@ class WarTracker(commands.Cog):
     
     @tasks.loop(seconds=WAR_SERVERS_UPDATE_INTERVAL)
     async def _update(self):
-        serverList = self._serverListTracker.getData()
+        serverList = self._serverListReceiver.getData()
         if not serverList:
             return
         
@@ -104,7 +104,7 @@ class WarTracker(commands.Cog):
         
         return make_entry_pages(await make_stat_entries(
             valGetter, filter_=filter_, lb=lb),
-            title=titlePrefix + "War Leader Board", api=self._serverListTracker)
+            title=titlePrefix + "War Leader Board", endpoint=WynnAPI.serverList)
 
     @parser("wc", ["total"], "-snap", isGroup=True)
     async def display_war_count_lb(self, ctx: commands.Context, total, snap):
